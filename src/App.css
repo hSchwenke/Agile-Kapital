@@ -50,7 +50,7 @@ body {
   }
 }
 
-/* Cartões (Cards) Brancos */
+/* Cartões Brancos */
 .card {
   background: #ffffff;
   border-radius: 12px;
@@ -183,16 +183,16 @@ button:active {
 
 /* Lista de Transações (Extrato) com Scroll */
 .lista-transacoes {
-  list-style: none; /* Mantivemos a sua regra original! */
+  list-style: none;
   padding: 0;
   margin: 0;
   width: 100%;
-  max-height: 350px; /* Altura máxima da lista. Pode aumentar se achar pequena. */
-  overflow-y: auto; /* É essa linha mágica que cria a barra de rolagem! */
-  padding-right: 10px; /* Dá um espacinho para a barra não encostar nos números */
+  max-height: 350px; /* Altura máxima da lista */
+  overflow-y: auto; /* Scroll de rolagem */
+  padding-right: 10px; /* Space do scroll com os números */
 }
 
-/* --- Deixa a barra de rolagem mais fina e elegante --- */
+/* Style do scroll */
 .lista-transacoes::-webkit-scrollbar {
   width: 6px;
 }
@@ -273,15 +273,15 @@ font-size: 1.1rem; /* Numero maior para destaque */
   align-items: center;
   margin-top: 5px
 }
-/* AQUI ESTÁ A MÁGICA: 
+/* 
   Quando passar o mouse na linha (item-transacao), mude a opacidade do botão para 1
 */
 .item-transacao:hover .btn-delete {
   opacity: 1; /* Fica visível */
-  transform: translateX(0); /* Volta para a posição original, dando um efeito suave */
+  transform: translateX(0); /* Volta para a posição original, dando um efeito smooth */
 }
 
-/* Um pequeno efeito extra para quando passar o mouse no próprio botão (opcional) */
+/* Efeito adicional */
 .btn-delete:hover {
   transform: scale(1.2);
 }
