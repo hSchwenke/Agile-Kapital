@@ -178,18 +178,24 @@ function App() {
     );
   }
 
-  // Tela Principal do App (Mostrada se o usuário ESTIVER logado)
-  return (
-    <div className="container">
-      <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1>Agile Kapital</h1>
-          <p>Olá, <strong>{user.displayName?.split(' ')[0]}</strong>! Gerencie seu dinheiro de forma inteligente.</p>
-        </div>
-        <button onClick={sair} className="btn-delete" style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #ff4d4f', color: '#ff4d4f', borderRadius: '4px' }}>
+// Tela Principal do App (Mostrada se o usuário ESTIVER logado)
+return (
+  <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+    <header className="header" style={{ textAlign: 'center', marginBottom: '40px', position: 'relative' }}>
+      
+      {/* Botão Sair - Agora ele fica discreto no canto ou podemos centralizar depois */}
+      <div style={{ position: 'absolute', right: '0', top: '0' }}>
+        <button onClick={sair} className="btn-delete" style={{ padding: '6px 12px', fontSize: '12px', background: 'transparent', border: '1px solid #ff4d4f', color: '#ff4d4f', borderRadius: '4px', cursor: 'pointer' }}>
           Sair
         </button>
-      </header>
+      </div>
+
+      <h1 style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#2563eb' }}>Agile Kapital</h1>
+      <p style={{ color: '#666', fontSize: '1.1rem' }}>
+        Olá, <strong style={{ color: '#2563eb' }}>{user.displayName?.split(' ')[0]}</strong>! 👋<br />
+        <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Gerencie seu dinheiro de forma inteligente.</span>
+      </p>
+    </header>
 
       <div className="grid-layout">
         <div className="coluna-esquerda">
