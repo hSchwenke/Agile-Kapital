@@ -190,9 +190,9 @@ return (
         </button>
       </div>
 
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#2563eb' }}>Agile Kapital</h1>
+      <h1 style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#000000' }}>Agile Kapital</h1>
       <p style={{ color: '#666', fontSize: '1.1rem' }}>
-        Olá, <strong style={{ color: '#2563eb' }}>{user.displayName?.split(' ')[0]}</strong>! 👋<br />
+        Olá, <strong style={{ color: '#2563eb' }}>{user.displayName?.split(' ')[0]}</strong>! <br />
         <span style={{ fontSize: '0.9rem', opacity: 0.8 }}>Gerencie seu dinheiro de forma inteligente.</span>
       </p>
     </header>
