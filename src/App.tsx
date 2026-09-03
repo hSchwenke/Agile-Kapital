@@ -12,6 +12,7 @@ interface Transacao {
   tipo: 'receita' | 'despesa';
   data?: string; 
   userId: string; 
+  competencia: string;
 }
 
 // --- FUNÇÕES DE FORMATAÇÃO (BRL e Data) ---
@@ -45,6 +46,9 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [carregandoLogin, setCarregandoLogin] = useState(true);
 
+  // --- LÓGICA DE COMPETÊNCIA ---
+  const [mesCompetencia, setMesCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
+
   // --- LÓGICA DO TEMA (LIGHT/DARK) ---
   const [tema, setTema] = useState<'light' | 'dark'>('dark');
 
@@ -76,6 +80,15 @@ function App() {
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (usuarioAtual) => {
+      if (!usuarioAtual) {
+        // Limpa os estados sensíveis no logout
+        setTransacoes([]);
+        setRendaFixa(0);
+        setDescricao('');
+        setValor('');
+        setRendaInput('');
+        setMesCompetencia(new Date().toISOString().slice(0, 7));
+      }
       setUser(usuarioAtual);
       setCarregandoLogin(false); 
     });
@@ -88,6 +101,7 @@ function App() {
     const q = query(
       collection(db, 'transacoes'), 
       where('userId', '==', user.uid), 
+      where('competencia', '==', mesCompetencia),
       orderBy('data', 'asc')
     );
     
@@ -112,7 +126,7 @@ function App() {
       unsubscribeTransacoes();
       unsubscribeRenda();
     };
-  }, [user]); 
+  }, [user, mesCompetencia]);
 
   const loginComGoogle = async () => {
     const provider = new GoogleAuthProvider();
@@ -158,7 +172,8 @@ function App() {
         valor: Number(valor),
         tipo: tipo,
         data: new Date().toISOString(), 
-        userId: user.uid 
+        userId: user.uid,
+        competencia: mesCompetencia
       });
 
       setDescricao('');
@@ -265,7 +280,15 @@ function App() {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* Seletor de Mês/Ano */}
+            <input 
+              type="month"
+              value={mesCompetencia}
+              onChange={(e) => setMesCompetencia(e.target.value)}
+              className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors shadow-sm dark:shadow-none cursor-pointer"
+            />
+
             {/* Botão de Alternar Tema */}
             <button
               onClick={alternarTema}
