@@ -3,20 +3,27 @@ import { db, auth } from './firebase';
 import { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, setDoc, where } from 'firebase/firestore'; 
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, type User } from 'firebase/auth'; 
 import { Toaster, toast } from 'react-hot-toast'; // Importação das notificações
+import { SummaryCards } from './components/SummaryCards';
+import { PeriodInsightCard } from './components/analytics/PeriodInsightCard';
+import { CATEGORIAS, LISTA_CATEGORIAS, type CategoriaId } from './utils/categorias';
+import { LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } from 'lucide-react';
+import { TutorialPopover, getHighlightClass } from './components/TutorialPopover';
 import './App.css';
 
-interface Transacao {
+export interface Transacao {
   id: string;
   descricao: string;
   valor: number;
   tipo: 'receita' | 'despesa';
+  categoria?: CategoriaId | string;
   data?: string; 
   userId: string; 
   competencia: string;
 }
 
 // --- FUNÇÕES DE FORMATAÇÃO (BRL e Data) ---
-const formatarMoeda = (valor: number) => {
+const formatarMoeda = (valor: number, show: boolean = true) => {
+  if (!show) return 'R$ •••••';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
@@ -39,29 +46,87 @@ function App() {
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
+  const [categoria, setCategoria] = useState<CategoriaId>('outros');
+  const [filtroCategoria, setFiltroCategoria] = useState<CategoriaId | 'todas'>('todas');
+  const [transacaoParaDeletar, setTransacaoParaDeletar] = useState<string | null>(null);
 
   const [rendaFixa, setRendaFixa] = useState<number>(0);
   const [rendaInput, setRendaInput] = useState('');
 
   const [user, setUser] = useState<User | null>(null);
   const [carregandoLogin, setCarregandoLogin] = useState(true);
+  
+  const [showValues, setShowValues] = useState(true);
+  const [modalRendaAberto, setModalRendaAberto] = useState(false);
+  const [modalTransacaoAberto, setModalTransacaoAberto] = useState(false);
+
+  // --- TUTORIAL ONBOARDING ---
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(1);
+
+  useEffect(() => {
+    if (!localStorage.getItem('ak_tutorial_done')) {
+      setShowTutorial(true);
+    }
+  }, []);
+
+  const finishTutorial = () => {
+    localStorage.setItem('ak_tutorial_done', 'true');
+    setShowTutorial(false);
+  };
+
+  const resetTutorial = () => {
+    localStorage.removeItem('ak_tutorial_done');
+    setTutorialStep(1);
+    setShowTutorial(true);
+  };
 
   // --- LÓGICA DE COMPETÊNCIA ---
   const [mesCompetencia, setMesCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
 
-  // --- LÓGICA DO TEMA (LIGHT/DARK) ---
-  const [tema, setTema] = useState<'light' | 'dark'>('dark');
+  const alterarMes = (delta: number) => {
+    const [ano, mes] = mesCompetencia.split('-').map(Number);
+    const data = new Date(ano, mes - 1 + delta, 1);
+    const novoAno = data.getFullYear();
+    const novoMes = String(data.getMonth() + 1).padStart(2, '0');
+    setMesCompetencia(`${novoAno}-${novoMes}`);
+  };
 
-  useEffect(() => {
+  const handleEditIncome = () => {
+    setModalRendaAberto(true);
+  };
+
+  const getNomeMesAno = () => {
+    const [ano, mes] = mesCompetencia.split('-').map(Number);
+    const data = new Date(ano, mes - 1, 1);
+    const formatadorLongo = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+    const formatadorCurto = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
+    
+    const formatoLongo = formatadorLongo.format(data);
+    const nomeLongo = formatoLongo.charAt(0).toUpperCase() + formatoLongo.slice(1);
+    
+    const mesCurto = formatadorCurto.format(data).replace('.', '');
+    const nomeCurto = `${mesCurto.charAt(0).toUpperCase() + mesCurto.slice(1)}/${ano}`;
+    
+    return (
+      <>
+        <span className="hidden sm:inline">{nomeLongo}</span>
+        <span className="sm:hidden">{nomeCurto}</span>
+      </>
+    );
+  };
+
+  // --- LÓGICA DO TEMA (LIGHT/DARK) ---
+  const [tema, setTema] = useState<'light' | 'dark'>(() => {
     const temaSalvo = localStorage.getItem('agile-theme');
     if (temaSalvo === 'light' || temaSalvo === 'dark') {
-      setTema(temaSalvo);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTema('dark');
-    } else {
-      setTema('light');
+      return temaSalvo;
     }
-  }, []);
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -154,6 +219,7 @@ function App() {
         valor: Number(rendaInput)
       });
       setRendaInput('');
+      setModalRendaAberto(false);
       toast.success('Receita atualizada!');
     } catch (error) {
       console.error("Erro ao salvar renda: ", error);
@@ -171,6 +237,7 @@ function App() {
         descricao: descricao,
         valor: Number(valor),
         tipo: tipo,
+        categoria: categoria,
         data: new Date().toISOString(), 
         userId: user.uid,
         competencia: mesCompetencia
@@ -178,6 +245,9 @@ function App() {
 
       setDescricao('');
       setValor('');
+      setCategoria('outros');
+      setTipo('despesa');
+      setModalTransacaoAberto(false);
       toast.success('Transação adicionada!');
     } catch (error) {
       console.error("Erro ao salvar transação: ", error);
@@ -185,25 +255,19 @@ function App() {
     }
   };
 
-  const deletarTransacao = async (id: string) => {
+  const confirmarDelecao = async () => {
+    if (!transacaoParaDeletar) return;
     try {
-      await deleteDoc(doc(db, 'transacoes', id));
+      await deleteDoc(doc(db, 'transacoes', transacaoParaDeletar));
       toast.success('Transação removida!');
     } catch (error) {
       console.error("Erro ao deletar transação: ", error);
       toast.error('Erro ao remover transação.');
+    } finally {
+      setTransacaoParaDeletar(null);
     }
   }
 
-  const totalDespesas = transacoes
-    .filter(t => t.tipo === 'despesa')
-    .reduce((acc, curr) => acc + curr.valor, 0);
-  
-  const totalReceitasExtras = transacoes
-    .filter(t => t.tipo === 'receita')
-    .reduce((acc, curr) => acc + curr.valor, 0);
-
-  const saldoAtual = rendaFixa + totalReceitasExtras - totalDespesas;
 
   // 1. TELA DE CARREGAMENTO (Estilo Vercel Minimalista)
   if (carregandoLogin) {
@@ -267,7 +331,7 @@ function App() {
     <div className="min-h-screen w-full bg-gray-50 dark:bg-[#09090b] text-gray-900 dark:text-[#f4f4f5] font-sans px-4 py-8 antialiased transition-colors duration-300">
       <Toaster position="bottom-center" toastOptions={{ className: 'dark:bg-[#18181b] dark:text-[#f4f4f5] dark:border dark:border-[#27272a]' }} />
       
-      <div className="max-w-5xl mx-auto w-full">
+      <div className="max-w-5xl mx-auto w-full relative">
         
         {/* Header da Dashboard */}
         <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-200 dark:border-[#27272a] pb-6 mb-8 gap-4 transition-colors duration-300">
@@ -280,166 +344,172 @@ function App() {
             </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            {/* Seletor de Mês/Ano */}
-            <input 
-              type="month"
-              value={mesCompetencia}
-              onChange={(e) => setMesCompetencia(e.target.value)}
-              className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors shadow-sm dark:shadow-none cursor-pointer"
-            />
-
-            {/* Botão de Alternar Tema */}
-            <button
-              onClick={alternarTema}
-              className="p-2 rounded-md bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 dark:border-transparent dark:bg-[#18181b] dark:hover:bg-[#27272a] dark:text-[#a1a1aa] transition-colors shadow-sm dark:shadow-none"
-              title="Alternar tema"
-            >
-              {tema === 'dark' ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
-
-            <button 
-              onClick={sair} 
-              className="px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-[#f43f5e] bg-rose-50 hover:bg-rose-100 dark:bg-[#f43f5e]/10 dark:hover:bg-[#f43f5e]/20 border border-rose-200 dark:border-[#f43f5e]/20 rounded-md transition-all active:scale-95"
-            >
-              Sair da conta
-            </button>
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <div className="flex items-center gap-2">
+              {/* Botão de Ajuda (Reiniciar Tutorial) */}
+              <button
+                onClick={resetTutorial}
+                className="p-2 rounded-md bg-white border border-gray-200 hover:bg-gray-100 text-indigo-600 dark:border-transparent dark:bg-[#18181b] dark:hover:bg-[#27272a] dark:text-[#8b5cf6] transition-colors shadow-sm dark:shadow-none"
+                title="Reiniciar Tutorial"
+              >
+                <HelpCircle size={16} />
+              </button>
+              {/* Botão de Alternar Tema */}
+              <button
+                onClick={alternarTema}
+                className="p-2 rounded-md bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 dark:border-transparent dark:bg-[#18181b] dark:hover:bg-[#27272a] dark:text-[#a1a1aa] transition-colors shadow-sm dark:shadow-none"
+                title="Alternar tema"
+              >
+                {tema === 'dark' ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+              {/* Botão de Mostrar/Ocultar Valores */}
+              <div className="relative flex items-center">
+                <button
+                  onClick={() => setShowValues(!showValues)}
+                  className={`p-2 rounded-md bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 dark:border-transparent dark:bg-[#18181b] dark:hover:bg-[#27272a] dark:text-[#a1a1aa] shadow-sm dark:shadow-none ${getHighlightClass(showTutorial && tutorialStep === 2)}`}
+                  title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+                >
+                  {showValues ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+                <TutorialPopover 
+                   showTutorial={showTutorial} tutorialStep={tutorialStep} 
+                   setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
+                   stepIndex={2} text="Privacidade em um clique: Use o botão de Olho no topo para ocultar ou exibir todos os valores do seu painel financeiro."
+                   arrowPosition="top" 
+                />
+              </div>
+              {/* Botão de Sair da conta */}
+              <button 
+                onClick={sair} 
+                className="p-2 sm:px-3 sm:py-1.5 text-xs font-medium text-rose-600 dark:text-[#f43f5e] bg-rose-50 hover:bg-rose-100 dark:bg-[#f43f5e]/10 dark:hover:bg-[#f43f5e]/20 border border-rose-200 dark:border-[#f43f5e]/20 rounded-md transition-all active:scale-95"
+                title="Sair da conta"
+              >
+                <LogOut size={16} className="sm:inline-block sm:mr-1 align-text-bottom" />
+                <span className="hidden sm:inline">Sair</span>
+              </button>
+            </div>
+            
+            {/* Botão + Nova Transação */}
+            <div className="relative flex items-center">
+              <button
+                onClick={() => setModalTransacaoAberto(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-md active:scale-95 shadow-lg shadow-purple-500/25 ${getHighlightClass(showTutorial && tutorialStep === 4)}`}
+              >
+                <Plus size={14} />
+                Nova Transação
+              </button>
+              <TutorialPopover 
+                 showTutorial={showTutorial} tutorialStep={tutorialStep} 
+                 setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
+                 stepIndex={4} text="Para registrar entradas ou saídas, é só clicar no botão roxo '+ Nova Transação' na barra superior."
+                 arrowPosition="top" 
+              />
+            </div>
           </div>
         </header>
 
-        {/* Grid Principal Layout Vercel */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Seção de Inputs (Lado Esquerdo - Ocupa 1 Coluna) */}
-          <div className="md:col-span-1 space-y-6">
-            
-            {/* Bloco: Renda Mensal */}
-            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 space-y-4 shadow-sm transition-colors duration-300">
-              <div>
-                <h2 className="text-sm font-semibold tracking-wide text-gray-500 dark:text-[#a1a1aa] uppercase">Receita Mensal</h2>
-                {/* Formatado para BRL */}
-                <p className="text-xl font-bold text-gray-900 dark:text-[#f4f4f5] mt-1">{formatarMoeda(rendaFixa)}</p>
-              </div>
-              <form onSubmit={salvarRendaFixa} className="flex gap-2">
-                <input 
-                  type="number" 
-                  placeholder="Ex: 3500.00" 
-                  value={rendaInput}
-                  onChange={(e) => setRendaInput(e.target.value)}
-                  step="0.01"
-                  className="flex-1 bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-[#8b5cf6] dark:hover:bg-[#7c3aed] text-white text-sm font-medium rounded-lg transition-colors active:scale-95">
-                  Definir
-                </button>
-              </form>
-            </div>
+        {/* Cards de Resumo Financeiro (Sprint 2) */}
+        <SummaryCards 
+          rendaBase={rendaFixa} 
+          transacoes={transacoes} 
+          showValues={showValues} 
+          onEditIncome={handleEditIncome} 
+          showTutorial={showTutorial}
+          tutorialStep={tutorialStep}
+          setTutorialStep={setTutorialStep}
+          finishTutorial={finishTutorial}
+        />
 
-            {/* Bloco: Nova Transação */}
-            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 space-y-4 shadow-sm transition-colors duration-300">
-              <h2 className="text-sm font-semibold tracking-wide text-gray-500 dark:text-[#a1a1aa] uppercase">Nova Transação</h2>
-              <form onSubmit={salvarTransacao} className="space-y-3">
-                <div className="space-y-1">
-                  <input 
-                    type="text" 
-                    placeholder="Descrição (ex: Conta de Luz)" 
-                    value={descricao}
-                    onChange={(e) => setDescricao(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors"
-                  />
+        {/* Seção do Painel Principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+          {/* Lado Esquerdo / Topo Mobile: Extrato (Ocupa 2 colunas no Desktop) */}
+          <div className="lg:col-span-2 order-2 lg:order-1">
+            {/* Extrato de Transações */}
+            <div className="w-full">
+              <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <h2 className="text-sm font-semibold tracking-wide text-gray-500 dark:text-[#a1a1aa] uppercase">Extrato de Transações</h2>
+              <div className={`grid grid-cols-2 sm:flex sm:flex-row items-center gap-2 relative rounded-lg w-full sm:w-auto ${getHighlightClass(showTutorial && tutorialStep === 1)}`}>
+                {/* Seletor de Mês/Ano */}
+                <div className="flex items-center justify-between bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-2 py-1.5 w-full h-10 min-w-[140px]">
+                  <button onClick={() => alterarMes(-1)} className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-[#27272a] text-gray-500 dark:text-[#a1a1aa] transition-colors" title="Mês anterior">
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-[#f4f4f5] px-1 text-center truncate">{getNomeMesAno()}</span>
+                  <button onClick={() => alterarMes(1)} className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-[#27272a] text-gray-500 dark:text-[#a1a1aa] transition-colors" title="Próximo mês">
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input 
-                    type="number" 
-                    placeholder="Valor (R$)" 
-                    value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    step="0.01"
-                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <div className="relative w-full">
-                    <select 
-                      value={tipo} 
-                      onChange={(e) => setTipo(e.target.value as 'receita' | 'despesa')}
-                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg pl-3 pr-8 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors cursor-pointer appearance-none"
-                    >
-                      <option value="despesa" className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">Despesa</option>
-                      <option value="receita" className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">Receita Extra</option>
-                    </select>
-                    
-                    {/* Nova Setinha Minimalista Injetada via SVG */}
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-500 dark:text-[#71717a]">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
+                
+                {/* Filtro de Categoria */}
+                <div className="relative w-full h-10 min-w-[140px]">
+                  {/* Mobile Select (Short Label) */}
+                  <select 
+                    value={filtroCategoria} 
+                    onChange={(e) => setFiltroCategoria(e.target.value as CategoriaId | 'todas')}
+                    className="sm:hidden w-full h-10 py-2 pl-3 pr-8 leading-normal flex items-center bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg text-xs text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors cursor-pointer appearance-none truncate"
+                  >
+                    <option value="todas" className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">Categorias (Todas)</option>
+                    {LISTA_CATEGORIAS.map(cat => (
+                      <option key={cat.id} value={cat.id} className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">{cat.label}</option>
+                    ))}
+                  </select>
+
+                  {/* Desktop Select (Long Label) */}
+                  <select 
+                    value={filtroCategoria} 
+                    onChange={(e) => setFiltroCategoria(e.target.value as CategoriaId | 'todas')}
+                    className="hidden sm:flex w-full h-10 py-2 pl-3 pr-8 leading-normal items-center bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors cursor-pointer appearance-none"
+                  >
+                    <option value="todas" className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">Todas as Categorias</option>
+                    {LISTA_CATEGORIAS.map(cat => (
+                      <option key={cat.id} value={cat.id} className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">{cat.label}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
                 </div>
-                <button type="submit" className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white dark:bg-[#f4f4f5] dark:hover:bg-[#e4e4e7] dark:text-[#09090b] text-sm font-medium rounded-lg transition-colors active:scale-[0.99]">
-                  Adicionar Item
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* Seção de Dados (Lado Direito - Ocupa 2 Colunas) */}
-          <div className="md:col-span-2 space-y-6">
-            
-            {/* Bloco: Fechamento / Saldo Projetado Dinâmico */}
-            <div className={`relative overflow-hidden border rounded-xl p-6 transition-all duration-300 ${
-              saldoAtual >= 101 
-                ? 'bg-white border-gray-200 dark:bg-[#18181b] dark:border-[#27272a]' 
-                : 'bg-rose-50 border-rose-200 dark:bg-[#1c1016] dark:border-[#e11d48]/20'
-            }`}>
-              {/* Efeito Glow interno apenas no modo seguro */}
-              {saldoAtual >= 101 && (
-                <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 dark:bg-[#8b5cf6]/10 blur-3xl rounded-full pointer-events-none" />
-              )}
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xs font-semibold tracking-wider text-gray-500 dark:text-[#a1a1aa] uppercase">Saldo Final Projetado</h2>
-                  {/* Formatado para BRL */}
-                  <p className={`text-4xl font-bold tracking-tight mt-2 ${
-                    saldoAtual >= 101 ? 'text-indigo-600 dark:text-[#8b5cf6]' : 'text-rose-600 dark:text-[#f43f5e]'
-                  }`}>
-                    {formatarMoeda(saldoAtual)}
-                  </p>
-                </div>
-                {saldoAtual <= 100 && (
-                  <span className="px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-[#f43f5e] bg-rose-100 dark:bg-[#f43f5e]/10 border border-rose-200 dark:border-[#f43f5e]/20 rounded-full animate-pulse">
-                    Sinal Vermelho
-                  </span>
-                )}
+                <TutorialPopover 
+                   showTutorial={showTutorial} tutorialStep={tutorialStep} 
+                   setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
+                   stepIndex={1} text="Na barra do Extrato, você pode navegar entre os meses de competência e filtrar facilmente suas transações por categoria."
+                   arrowPosition="top-right" 
+                />
               </div>
             </div>
-
-            {/* Bloco: Extrato */}
-            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300">
-              <h2 className="text-sm font-semibold tracking-wide text-gray-500 dark:text-[#a1a1aa] uppercase mb-4">Extrato de Transações</h2>
-              
-              {transacoes.length === 0 ? (
-                <div className="text-center py-8 border border-dashed border-gray-300 dark:border-[#27272a] rounded-lg">
-                  <p className="text-sm text-gray-400 dark:text-[#71717a]">Nenhuma movimentação lançada neste mês.</p>
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-[#27272a]">
-                  <ul className="divide-y divide-gray-200 dark:divide-[#27272a]">
-                    {transacoes.map((t) => (
-                      <li key={t.id} className="flex items-center justify-between p-3.5 bg-white hover:bg-gray-50 dark:bg-[#18181b] dark:hover:bg-[#202024] transition-colors group">
-                        <div className="flex items-center gap-3">
+            
+            {transacoes.length === 0 ? (
+              <div className="text-center py-8 border border-dashed border-gray-300 dark:border-[#27272a] rounded-lg">
+                <p className="text-sm text-gray-400 dark:text-[#71717a]">Nenhuma movimentação lançada neste mês.</p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-[#27272a]">
+                <ul className="divide-y divide-gray-200 dark:divide-[#27272a]">
+                  {transacoes
+                    .filter(t => filtroCategoria === 'todas' || t.categoria === filtroCategoria)
+                    .map((t) => {
+                    const categoriaDef = t.categoria ? CATEGORIAS[t.categoria as CategoriaId] || CATEGORIAS.outros : CATEGORIAS.outros;
+                    const CategoriaIcon = categoriaDef.Icon;
+                    
+                    return (
+                      <li key={t.id} className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors group">
+                        {/* Lado Esquerdo: Ícone, Título, Badge e Data */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
                           {/* Botão X Deletar minimalista */}
                           <button 
-                            onClick={() => deletarTransacao(t.id)} 
-                            className="opacity-40 group-hover:opacity-100 text-gray-400 hover:text-rose-500 dark:text-[#71717a] dark:hover:text-[#f43f5e] transition-all transform active:scale-90"
+                            onClick={() => setTransacaoParaDeletar(t.id)} 
+                            className="opacity-40 group-hover:opacity-100 text-gray-400 hover:text-rose-500 dark:text-[#71717a] dark:hover:text-[#f43f5e] transition-all transform active:scale-90 shrink-0"
                             title="Remover transação"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -447,30 +517,208 @@ function App() {
                             </svg>
                           </button>
                           
-                          {/* Descrição e Data em cinza */}
-                          <div className="flex flex-col">
-                            <span className="text-sm text-gray-900 dark:text-[#f4f4f5] font-medium">{t.descricao}</span>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 truncate">
+                              <span className="font-medium text-gray-900 dark:text-white text-sm truncate">{t.descricao}</span>
+                              <span className={`whitespace-nowrap overflow-visible max-w-none inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full shrink-0 ${categoriaDef.colorClass} w-max`}>
+                                <CategoriaIcon className="w-3 h-3" />
+                                {categoriaDef.label}
+                              </span>
+                            </div>
                             {t.data && <span className="text-xs text-gray-400 dark:text-[#71717a] mt-0.5">{formatarData(t.data)}</span>}
                           </div>
                         </div>
                         
-                        {/* Formatado para BRL */}
-                        <span className={`text-sm font-semibold tracking-tight ${
+                        {/* Lado Direito: Valor */}
+                        <div className={`text-right shrink-0 font-semibold text-sm ${
                           t.tipo === 'receita' ? 'text-emerald-600 dark:text-[#10b981]' : 'text-rose-600 dark:text-[#f43f5e]'
                         }`}>
-                          {t.tipo === 'receita' ? '+' : '-'} {formatarMoeda(t.valor)}
-                        </span>
+                          {t.tipo === 'receita' ? '+' : '-'} {showValues ? formatarMoeda(t.valor) : 'R$ •••••'}
+                        </div>
                       </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                  )})}
+                </ul>
+              </div>
+            )}
+          </div>
             </div>
-
+          </div>
+          
+          {/* Lado Direito / Meio Mobile: Visão do Período (Ocupa 1 coluna) */}
+          <div className="lg:col-span-1 order-1 lg:order-2">
+            <PeriodInsightCard transacoes={transacoes} rendaBase={rendaFixa} showValues={showValues} />
           </div>
         </div>
 
       </div>
+      
+      {/* Modal de Confirmação */}
+      {transacaoParaDeletar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5] mb-2">Excluir Transação</h3>
+            <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mb-6">
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setTransacaoParaDeletar(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmarDelecao}
+                className="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600 rounded-lg transition-colors shadow-sm"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Edição da Renda Base */}
+      {modalRendaAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Editar Renda Base</h3>
+              <button onClick={() => setModalRendaAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={salvarRendaFixa} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa] mb-1">Valor da Receita Mensal</label>
+                <input 
+                  type="number" 
+                  placeholder="Ex: 3500.00" 
+                  value={rendaInput}
+                  onChange={(e) => setRendaInput(e.target.value)}
+                  step="0.01"
+                  className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setModalRendaAberto(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-[#8b5cf6] dark:hover:bg-[#7c3aed] rounded-lg transition-colors shadow-sm"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Nova Transação */}
+      {modalTransacaoAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-md w-full transform transition-all">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Nova Transação</h3>
+              <button onClick={() => setModalTransacaoAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={salvarTransacao} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Descrição</label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: Conta de Luz" 
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor (R$)</label>
+                  <input 
+                    type="number" 
+                    placeholder="0.00" 
+                    value={valor}
+                    onChange={(e) => setValor(e.target.value)}
+                    step="0.01"
+                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Tipo</label>
+                  <div className="relative">
+                    <select 
+                      value={tipo} 
+                      onChange={(e) => setTipo(e.target.value as 'receita' | 'despesa')}
+                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg pl-3 pr-8 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors cursor-pointer appearance-none"
+                    >
+                      <option value="despesa" className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">Despesa</option>
+                      <option value="receita" className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">Receita Extra</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-500 dark:text-[#71717a]">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Categoria</label>
+                <div className="relative w-full">
+                  <select 
+                    value={categoria} 
+                    onChange={(e) => setCategoria(e.target.value as CategoriaId)}
+                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg pl-3 pr-8 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors cursor-pointer appearance-none"
+                  >
+                    {LISTA_CATEGORIAS.map(cat => (
+                      <option key={cat.id} value={cat.id} className="bg-white text-gray-900 dark:bg-[#18181b] dark:text-[#f4f4f5]">
+                        {cat.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-gray-500 dark:text-[#71717a]">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-[#27272a]">
+                <button 
+                  type="button"
+                  onClick={() => setModalTransacaoAberto(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors shadow-sm"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
