@@ -97,7 +97,7 @@ export function SummaryCards({
         {/* Rodapé */}
         <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
           <span className="truncate">
-            Renda base ({formatarMoeda(rendaBase, showValues)}) + extras
+            Alterar Renda Base
           </span>
 
           <div className="relative flex items-center">
