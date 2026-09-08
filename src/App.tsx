@@ -7,7 +7,8 @@ import { SummaryCards } from './components/SummaryCards';
 import { PeriodInsightCard } from './components/analytics/PeriodInsightCard';
 import { CATEGORIAS, LISTA_CATEGORIAS, type CategoriaId } from './utils/categorias';
 import { LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } from 'lucide-react';
-import { TutorialPopover, getHighlightClass } from './components/TutorialPopover';
+import { TutorialPopover } from './components/TutorialPopover';
+import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
 
 export interface Transacao {

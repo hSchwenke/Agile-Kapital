@@ -1,7 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Transacao } from '../App';
-import { TrendingUp, TrendingDown, Pencil } from 'lucide-react';
-import { TutorialPopover, getHighlightClass } from './TutorialPopover';
+import { TutorialPopover } from './TutorialPopover';
+import { getHighlightClass } from '../utils/getHighlightClass';
+import {
+  TrendingUp,
+  TrendingDown,
+  Pencil
+} from 'lucide-react';
 
 interface SummaryCardsProps {
   rendaBase: number;
