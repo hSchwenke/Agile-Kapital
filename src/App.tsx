@@ -285,13 +285,13 @@ function App() {
         <div className="relative z-10 w-full max-w-md p-8 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl shadow-xl dark:shadow-2xl mx-4 transition-colors duration-300">
           <div className="flex flex-col items-center text-center mb-8">
             <span className="px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:text-[#8b5cf6] bg-indigo-50 dark:bg-[#8b5cf6]/10 rounded-full border border-indigo-100 dark:border-[#8b5cf6]/20 mb-3">
-              v1.0.0
+              v1.1.0
             </span>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-[#f4f4f5]">
               Agile <span className="text-indigo-600 dark:text-[#8b5cf6]">Kapital</span>
             </h1>
             <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mt-2">
-              Gestão financeira inteligente com projeção de saldo.
+              Gestão financeira inteligente.
             </p>
           </div>
 
@@ -398,7 +398,7 @@ function App() {
               <TutorialPopover
                 showTutorial={showTutorial} tutorialStep={tutorialStep}
                 setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
-                stepIndex={4} text="Para registrar entradas ou saídas, é só clicar no botão roxo '+ Nova Transação' na barra superior."
+                stepIndex={4} text="Para registrar entradas ou saídas, basta selecionar 'Nova Transação'."
                 arrowPosition="top"
               />
             </div>

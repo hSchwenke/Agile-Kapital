@@ -115,11 +115,11 @@ export function SummaryCards({
             <TutorialPopover
               showTutorial={showTutorial}
               tutorialStep={tutorialStep}
+              stepIndex={3}
+              text="Clique no lápis para definir ou alterar sua renda mensal."
               setTutorialStep={setTutorialStep}
               finishTutorial={finishTutorial}
-              stepIndex={3}
-              text="Clique no ícone de lápis para definir ou alterar sua renda fixa mensal base."
-              arrowPosition="top-right"
+              arrowPosition="bottom-right"
             />
           </div>
         </div>
