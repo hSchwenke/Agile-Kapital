@@ -1,120 +1,169 @@
-import React, { useMemo } from 'react';
-import { ArrowUpRight, ArrowDownRight, DollarSign, Pencil } from 'lucide-react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { Transacao } from '../App';
-import { TutorialPopover, getHighlightClass, type TutorialProps } from './TutorialPopover';
+import { TrendingUp, TrendingDown, Pencil } from 'lucide-react';
+import { TutorialPopover, getHighlightClass } from './TutorialPopover';
 
-export interface SummaryCardsProps extends Partial<TutorialProps> {
+interface SummaryCardsProps {
   rendaBase: number;
   transacoes: Transacao[];
   showValues: boolean;
   onEditIncome: () => void;
+  showTutorial: boolean;
+  tutorialStep: number;
+  setTutorialStep: Dispatch<SetStateAction<number>>;
+  finishTutorial: () => void;
 }
 
-// Formatação oficial BRL requerida
-const formatarMoeda = (valor: number): string => {
+const formatarMoeda = (valor: number, show: boolean = true) => {
+  if (!show) return 'R$ •••••';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   }).format(valor);
 };
 
-export const SummaryCards: React.FC<SummaryCardsProps> = ({ 
-  rendaBase, 
-  transacoes, 
-  showValues, 
+export function SummaryCards({
+  rendaBase,
+  transacoes,
+  showValues,
   onEditIncome,
   showTutorial,
   tutorialStep,
   setTutorialStep,
   finishTutorial
-}) => {
-  // Total Entradas: Soma da Renda Base (rendas/{userId}) com todas as receitas do mês selecionado
-  const totalReceitas = useMemo(() => {
-    return transacoes
-      .filter((t) => t.tipo === 'receita')
-      .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
-  }, [transacoes]);
+}: SummaryCardsProps) {
+  const receitasExtras = transacoes
+    .filter((t) => t.tipo === 'receita')
+    .reduce((acc, t) => acc + t.valor, 0);
 
-  const totalEntradas = (Number(rendaBase) || 0) + totalReceitas;
+  const totalReceitas = rendaBase + receitasExtras;
 
-  // Total Saídas: Soma de todas as despesas do mês selecionado
-  const totalSaidas = useMemo(() => {
-    return transacoes
-      .filter((t) => t.tipo === 'despesa')
-      .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
-  }, [transacoes]);
+  const totalDespesas = transacoes
+    .filter((t) => t.tipo === 'despesa')
+    .reduce((acc, t) => acc + t.valor, 0);
 
-  // Saldo do Mês: Total Entradas - Total Saídas
-  const saldoMes = totalEntradas - totalSaidas;
-  const isSaldoPositivo = saldoMes >= 0;
+  // Cálculo de Comprometimento de Renda
+  const pctComprometido = totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
+  const pctExtras = rendaBase > 0 ? (receitasExtras / rendaBase) * 100 : 0;
 
-  const exibirValor = (valor: number) => showValues ? formatarMoeda(valor) : 'R$ •••••';
+  // Definição de cores dinâmicas
+  const getProgressColor = (pct: number) => {
+    if (pct >= 90) return 'bg-rose-500';
+    if (pct >= 70) return 'bg-amber-500';
+    return 'bg-emerald-500';
+  };
+
+  const getTextColor = (pct: number) => {
+    if (pct >= 90) return 'text-rose-500 dark:text-rose-400';
+    if (pct >= 70) return 'text-amber-500 dark:text-amber-400';
+    return 'text-emerald-600 dark:text-emerald-400';
+  };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mb-8">
-      {/* 1. Card Receitas */}
-      <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] border-l-4 border-l-emerald-500 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md group">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
+      {/* Card Receitas */}
+      <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
               Receitas
             </span>
-            <span className="text-[11px] text-gray-400 dark:text-[#71717a]">
-              Total Entradas
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+              <TrendingUp size={18} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mb-1">Total Entradas</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+            {formatarMoeda(totalReceitas, showValues)}
+          </h2>
+        </div>
+
+        {/* Barra de Progresso de Entradas Extras */}
+        <div className="my-4 space-y-1.5">
+          <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
+            <span>Receita extra</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+              +{pctExtras.toFixed(0)}%
             </span>
           </div>
-          <div className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            {/* Ícone de Entrada */}
-            <ArrowUpRight className="w-5 h-5" />
+          <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
+            <div
+              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(pctExtras, 100)}%` }}
+            />
           </div>
         </div>
-        <p className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-          {exibirValor(totalEntradas)}
-        </p>
-        <div className="mt-1.5 -ml-2 relative inline-block">
-          <button 
-            onClick={onEditIncome}
-            className={`cursor-pointer hover:bg-gray-100 hover:text-purple-600 dark:hover:bg-zinc-800/80 dark:hover:text-purple-400 rounded-md px-2 py-1 inline-flex items-center gap-1 border border-transparent dark:hover:border-zinc-700 text-xs text-gray-500 dark:text-[#a1a1aa] ${getHighlightClass(!!showTutorial && tutorialStep === 3)}`}
-            title="Clique para editar a renda base"
-          >
-            Renda base ({exibirValor(rendaBase)}) + extras
-            <Pencil className="w-3 h-3" />
-          </button>
-          
-          <TutorialPopover 
-             showTutorial={!!showTutorial} tutorialStep={tutorialStep || 1} 
-             setTutorialStep={setTutorialStep!} finishTutorial={finishTutorial!}
-             stepIndex={3} text="Sua renda fixa mudou? Basta clicar em 'Renda base + extras' no card de Receitas para atualizar o valor rapidamente."
-             arrowPosition="top-left" 
-          />
+
+        {/* Rodapé */}
+        <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
+          <span className="truncate">
+            Renda base ({formatarMoeda(rendaBase, showValues)}) + extras
+          </span>
+
+          <div className="relative flex items-center">
+            <button
+              onClick={onEditIncome}
+              className={`p-1.5 hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors ${getHighlightClass(
+                showTutorial && tutorialStep === 3
+              )}`}
+              title="Editar renda base"
+            >
+              <Pencil size={14} />
+            </button>
+
+            {/* Passo 3 com posicionamento top-right para mobile */}
+            <TutorialPopover
+              showTutorial={showTutorial}
+              tutorialStep={tutorialStep}
+              setTutorialStep={setTutorialStep}
+              finishTutorial={finishTutorial}
+              stepIndex={3}
+              text="Clique no ícone de lápis para definir ou alterar sua renda fixa mensal base."
+              arrowPosition="top-right"
+            />
+          </div>
         </div>
       </div>
 
-      {/* 2. Card Despesas */}
-      <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] border-l-4 border-l-rose-500 rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold tracking-wider text-rose-600 dark:text-rose-400 uppercase">
+      {/* Card Despesas */}
+      <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold tracking-wider text-rose-600 dark:text-rose-400 uppercase">
               Despesas
             </span>
-            <span className="text-[11px] text-gray-400 dark:text-[#71717a]">
-              Total Saídas
+            <div className="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-600 dark:text-rose-400">
+              <TrendingDown size={18} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mb-1">Total Saídas</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
+            {formatarMoeda(totalDespesas, showValues)}
+          </h2>
+        </div>
+
+        {/* Barra de Progresso do Comprometimento da Renda */}
+        <div className="my-4 space-y-1.5">
+          <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
+            <span>Comprometimento da renda</span>
+            <span className={`font-semibold ${getTextColor(pctComprometido)}`}>
+              {pctComprometido.toFixed(1)}%
             </span>
           </div>
-          <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
-            {/* Ícone de Saída */}
-            <ArrowDownRight className="w-5 h-5" />
+          <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${getProgressColor(pctComprometido)}`}
+              style={{ width: `${Math.min(pctComprometido, 100)}%` }}
+            />
           </div>
         </div>
-        <p className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
-          {exibirValor(totalSaidas)}
-        </p>
-        <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mt-1.5">
-          Gastos registrados no mês
-        </p>
+
+        {/* Rodapé */}
+        <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
+          <span>Gastos registrados no mês</span>
+          <div className="w-[27px] h-[27px]" aria-hidden="true" />
+        </div>
       </div>
     </div>
   );
-};
-
-export default SummaryCards;
+}

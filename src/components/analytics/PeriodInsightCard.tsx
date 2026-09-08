@@ -1,202 +1,112 @@
-import React, { useMemo } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, type TooltipProps } from 'recharts';
-import type { Transacao } from '../../App';
+import React from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CATEGORIAS, type CategoriaId } from '../../utils/categorias';
+import { type Transacao } from '../../App';
 
-interface PeriodInsightCardProps {
+interface Props {
   transacoes: Transacao[];
   rendaBase: number;
   showValues: boolean;
 }
 
-const COLORS: Record<string, string> = {
-  alimentacao: '#10B981',
-  moradia: '#6366F1',
-  transporte: '#F59E0B',
-  lazer: '#EC4899',
-  saude: '#F43F5E',
-  educacao: '#3B82F6',
-  outros: '#A855F7',
-};
+const CORES_GRAFICO = [
+  '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b',
+  '#ef4444', '#ec4899', '#6366f1', '#14b8a6'
+];
 
-const formatarMoeda = (valor: number): string => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-};
+export const PeriodInsightCard: React.FC<Props> = ({ transacoes, rendaBase, showValues }) => {
+  const despesas = transacoes.filter(t => t.tipo === 'despesa');
+  const totalDespesas = despesas.reduce((acc, t) => acc + t.valor, 0);
+  const totalReceitas = rendaBase + transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+  const saldo = totalReceitas - totalDespesas;
 
-export const PeriodInsightCard: React.FC<PeriodInsightCardProps> = ({ transacoes, rendaBase, showValues }) => {
-  // --- Cálculos de Saldo ---
-  const totalReceitas = useMemo(() => {
-    return transacoes
-      .filter((t) => t.tipo === 'receita')
-      .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
-  }, [transacoes]);
+  const agrupadoPorCategoria = despesas.reduce((acc, t) => {
+    const cat = (t.categoria as CategoriaId) || 'outros';
+    acc[cat] = (acc[cat] || 0) + t.valor;
+    return acc;
+  }, {} as Record<string, number>);
 
-  const totalEntradas = (Number(rendaBase) || 0) + totalReceitas;
+  const dadosGrafico = Object.entries(agrupadoPorCategoria)
+    .map(([cat, valor]) => ({
+      name: CATEGORIAS[cat as CategoriaId]?.label || 'Outros',
+      value: valor,
+      percentual: totalDespesas > 0 ? ((valor / totalDespesas) * 100).toFixed(1) : '0'
+    }))
+    .sort((a, b) => b.value - a.value);
 
-  const totalDespesas = useMemo(() => {
-    return transacoes
-      .filter((t) => t.tipo === 'despesa')
-      .reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
-  }, [transacoes]);
-
-  const saldoMes = totalEntradas - totalDespesas;
-  const isSaldoPositivo = saldoMes >= 0;
-
-  // --- Dados do Donut (somente despesas) ---
-  const despesas = useMemo(() => transacoes.filter((t) => t.tipo === 'despesa'), [transacoes]);
-
-  const { data, totalGeral, maiorCategoria } = useMemo(() => {
-    const somaPorCategoria = despesas.reduce((acc, t) => {
-      const cat = (t.categoria as string) || 'outros';
-      acc[cat] = (acc[cat] || 0) + t.valor;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const items = Object.keys(somaPorCategoria)
-      .map(key => {
-        const catId = key as CategoriaId;
-        const catInfo = CATEGORIAS[catId] || CATEGORIAS.outros;
-        return {
-          name: catInfo.label,
-          valor: somaPorCategoria[key],
-          color: COLORS[catId] || COLORS.outros,
-          id: catId,
-        };
-      })
-      .sort((a, b) => b.valor - a.valor);
-
-    const total = items.reduce((sum, item) => sum + item.valor, 0);
-    const maior = items.length > 0 ? items[0] : null;
-
-    return { data: items, totalGeral: total, maiorCategoria: maior };
-  }, [despesas]);
-
-  // --- Empty State ---
-  if (despesas.length === 0) {
-    return (
-      <div className="bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-xl p-5">
-        <h3 className="text-sm font-semibold tracking-wide text-gray-500 dark:text-zinc-400 uppercase mb-4">Visão do Período</h3>
-        <div className="flex flex-col items-center justify-center py-10">
-          <div className="w-20 h-20 rounded-full border-[6px] border-zinc-700/30 flex items-center justify-center mb-4">
-            <span className={`text-base font-bold ${isSaldoPositivo ? 'text-emerald-400' : 'text-red-400'}`}>
-              {showValues ? formatarMoeda(saldoMes) : 'R$ •••••'}
-            </span>
-          </div>
-          <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-medium mb-1">Saldo do Mês</p>
-          <p className="text-sm text-zinc-500 mt-2">Nenhum gasto registrado neste período</p>
-          <p className="text-[11px] text-zinc-600 mt-1">{transacoes.length} lançamento{transacoes.length !== 1 ? 's' : ''}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Tooltip Customizado ---
-  const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
-    if (active && payload && payload.length) {
-      const d = payload[0].payload;
-      const pct = ((d.valor / totalGeral) * 100).toFixed(1);
-      return (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl text-xs p-2.5 text-white">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-            <span className="font-medium">{d.name}</span>
-          </div>
-          <div className="mt-1 ml-[18px] text-zinc-300">
-            {formatarMoeda(d.valor)} <span className="text-zinc-500">({pct}%)</span>
-          </div>
-        </div>
-      );
-    }
-    return null;
+  const formatarMoeda = (val: number) => {
+    if (!showValues) return 'R$ •••••';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-xl p-5">
-      <h3 className="text-sm font-semibold tracking-wide text-gray-500 dark:text-zinc-400 uppercase mb-4">Visão do Período</h3>
+    <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm flex flex-col justify-between h-full transition-colors duration-300">
+      <h2 className="text-xs font-semibold tracking-wide text-gray-500 dark:text-[#a1a1aa] uppercase mb-2">
+        Visão do Período
+      </h2>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6">
-        {/* Coluna 1: Gráfico Donut com Saldo no Centro */}
-        <div className="w-full sm:w-[220px] shrink-0">
-          <div className="relative h-[220px] w-full flex items-center justify-center overflow-visible">
-            {/* Saldo no Centro */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-              <span className="text-[10px] tracking-wider uppercase text-zinc-400 font-medium">Saldo do Mês</span>
-              <span className={`text-lg sm:text-xl font-bold ${isSaldoPositivo ? 'text-emerald-400' : 'text-red-400'}`}>
-                {showValues ? formatarMoeda(saldoMes) : 'R$ •••••'}
+      {despesas.length === 0 ? (
+        <div className="flex flex-col items-center justify-center flex-1 py-6 text-center">
+          <p className="text-sm text-gray-400 dark:text-[#71717a]">Sem dados suficientes para o gráfico no período.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {/* Gráfico Donut com Altura Controlada */}
+          <div className="relative h-36 w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={dadosGrafico}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={46}
+                  outerRadius={62}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {dadosGrafico.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CORES_GRAFICO[index % CORES_GRAFICO.length]} stroke="transparent" />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Texto Central */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[9px] font-medium text-gray-400 uppercase tracking-wider">Saldo do Mês</span>
+              <span className={`text-sm font-bold ${saldo >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {formatarMoeda(saldo)}
               </span>
-              <span className="text-[11px] text-zinc-500 mt-0.5">
+              <span className="text-[9px] text-gray-500 dark:text-[#71717a]">
                 {transacoes.length} lançamento{transacoes.length !== 1 ? 's' : ''}
               </span>
             </div>
-
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="valor"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  stroke="none"
-                >
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
           </div>
-        </div>
 
-        {/* Coluna 2: Insight + Legenda */}
-        <div className="w-full min-w-0 flex-1">
-          {/* Mini-Insight */}
-          {maiorCategoria && (
-            <p className="text-xs text-gray-500 dark:text-zinc-400 mb-3 border-b border-gray-200 dark:border-zinc-800/50 pb-2.5">
-              Maior foco de gastos em{' '}
-              <span className="font-semibold text-gray-900 dark:text-white">{maiorCategoria.name}</span>{' '}
-              <span className="text-gray-400 dark:text-zinc-500">
-                ({((maiorCategoria.valor / totalGeral) * 100).toFixed(0)}%)
-              </span>
-            </p>
-          )}
-
-          {/* Legenda Customizada */}
-          <div className="flex flex-col gap-1.5">
-            {data.map((item, index) => {
-              const percent = ((item.valor / totalGeral) * 100).toFixed(1);
-              return (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-zinc-800/40 border border-gray-200 dark:border-zinc-800/60 rounded-lg text-xs gap-2"
-                >
-                  {/* Lado Esquerdo: Dot + Nome */}
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                    <span className="text-gray-700 dark:text-zinc-200 font-medium truncate min-w-[70px]">
-                      {item.name}
-                    </span>
-                  </div>
-
-                  {/* Lado Direito: Valor e Porcentagem */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {showValues ? formatarMoeda(item.valor) : 'R$ •••••'}
-                    </span>
-                    <span className="text-gray-400 dark:text-zinc-500 text-[11px] w-10 text-right">
-                      {percent}%
-                    </span>
-                  </div>
+          {/* Legenda Vertical Compacta */}
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100 dark:border-[#27272a]">
+            {dadosGrafico.slice(0, 3).map((item, index) => (
+              <div key={item.name} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: CORES_GRAFICO[index % CORES_GRAFICO.length] }}
+                  />
+                  <span className="text-gray-700 dark:text-[#f4f4f5] truncate text-[11px] font-medium">{item.name}</span>
                 </div>
-              );
-            })}
+                <div className="flex items-center gap-2 shrink-0 text-[11px]">
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {formatarMoeda(item.value)}
+                  </span>
+                  <span className="text-[10px] text-gray-400 dark:text-[#71717a] w-8 text-right">
+                    {item.percentual}%
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
