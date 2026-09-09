@@ -17,12 +17,13 @@ export function calcularTotalDespesas(
 }
 
 export function calcularSaldo(
-    transacoes: Transacao[]
+    transacoes: Transacao[],
+    rendaBase: number
 ): number {
-    return (
-        calcularTotalReceitas(transacoes) -
-        calcularTotalDespesas(transacoes)
-    );
+    const receitasExtras = calcularTotalReceitas(transacoes);
+    const despesas = calcularTotalDespesas(transacoes);
+
+    return rendaBase + receitasExtras - despesas;
 }
 
 export function calcularDespesasPorCategoria(

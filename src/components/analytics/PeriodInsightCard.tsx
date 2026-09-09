@@ -3,9 +3,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CATEGORIAS, type CategoriaId } from '../../utils/categorias';
 import type { Transacao } from '../../domain/transaction';
 import {
-  calcularTotalReceitas,
   calcularTotalDespesas,
   calcularDespesasPorCategoria,
+  calcularSaldo,
 } from '../../finance/financialCore';
 
 interface Props {
@@ -16,14 +16,14 @@ interface Props {
 
 const CORES_GRAFICO = [
   '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b',
-  '#ef4444', '#ec4899', '#6366f1', '#14b8a6'
+  '#ef4444', '#ec4899', '#6366f1', '#14b8a6',
+  '#d97706', '#06b6d4',
 ];
 
 export const PeriodInsightCard: React.FC<Props> = ({ transacoes, rendaBase, showValues }) => {
   const despesas = transacoes.filter(t => t.tipo === 'despesa');
   const totalDespesas = calcularTotalDespesas(transacoes);
-  const totalReceitas = rendaBase + calcularTotalReceitas(transacoes);
-  const saldo = totalReceitas - totalDespesas;
+  const saldo = calcularSaldo(transacoes, rendaBase);
 
   const agrupadoPorCategoria = calcularDespesasPorCategoria(transacoes);
 
