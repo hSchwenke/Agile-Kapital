@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
-import type { Transacao } from '../App';
+import type { Transacao } from '../domain/transaction';
 import { TutorialPopover } from './TutorialPopover';
 import { getHighlightClass } from '../utils/getHighlightClass';
 import {

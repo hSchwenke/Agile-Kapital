@@ -1,7 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CATEGORIAS, type CategoriaId } from '../../utils/categorias';
-import { type Transacao } from '../../App';
+import type { Transacao } from '../../domain/transaction';
 
 interface Props {
   transacoes: Transacao[];

@@ -10,17 +10,7 @@ import { LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } f
 import { TutorialPopover } from './components/TutorialPopover';
 import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
-
-export interface Transacao {
-  id: string;
-  descricao: string;
-  valor: number;
-  tipo: 'receita' | 'despesa';
-  categoria?: CategoriaId | string;
-  data?: string;
-  userId: string;
-  competencia: string;
-}
+import type { Transacao } from './domain/transaction';
 
 const formatarMoeda = (valor: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
