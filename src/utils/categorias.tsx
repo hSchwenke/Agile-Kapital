@@ -6,17 +6,21 @@ import {
   HeartPulse,
   GraduationCap,
   Package,
-  type LucideIcon
+  type LucideIcon,
+  ShoppingCart,
+  Repeat2
 } from 'lucide-react';
 
-export type CategoriaId = 
+export type CategoriaId =
   | 'alimentacao'
   | 'moradia'
   | 'transporte'
   | 'lazer'
   | 'saude'
   | 'educacao'
-  | 'outros';
+  | 'outros'
+  | 'compras'
+  | 'assinaturas';
 
 export interface CategoriaDef {
   id: CategoriaId;
@@ -67,6 +71,18 @@ export const CATEGORIAS: Record<CategoriaId, CategoriaDef> = {
     label: 'Outros',
     Icon: Package,
     colorClass: 'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400',
+  },
+  compras: {
+    id: 'compras',
+    label: 'Compras',
+    Icon: ShoppingCart,
+    colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
+  },
+  assinaturas: {
+    id: 'assinaturas',
+    label: 'Assinaturas',
+    Icon: Repeat2,
+    colorClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-40',
   }
 };
 
