@@ -2,6 +2,11 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CATEGORIAS, type CategoriaId } from '../../utils/categorias';
 import type { Transacao } from '../../domain/transaction';
+import {
+  calcularTotalReceitas,
+  calcularTotalDespesas,
+  calcularDespesasPorCategoria,
+} from '../../finance/financialCore';
 
 interface Props {
   transacoes: Transacao[];
@@ -16,15 +21,11 @@ const CORES_GRAFICO = [
 
 export const PeriodInsightCard: React.FC<Props> = ({ transacoes, rendaBase, showValues }) => {
   const despesas = transacoes.filter(t => t.tipo === 'despesa');
-  const totalDespesas = despesas.reduce((acc, t) => acc + t.valor, 0);
-  const totalReceitas = rendaBase + transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+  const totalDespesas = calcularTotalDespesas(transacoes);
+  const totalReceitas = rendaBase + calcularTotalReceitas(transacoes);
   const saldo = totalReceitas - totalDespesas;
 
-  const agrupadoPorCategoria = despesas.reduce((acc, t) => {
-    const cat = (t.categoria as CategoriaId) || 'outros';
-    acc[cat] = (acc[cat] || 0) + t.valor;
-    return acc;
-  }, {} as Record<string, number>);
+  const agrupadoPorCategoria = calcularDespesasPorCategoria(transacoes);
 
   const dadosGrafico = Object.entries(agrupadoPorCategoria)
     .map(([cat, valor]) => ({

@@ -7,6 +7,10 @@ import {
   TrendingDown,
   Pencil
 } from 'lucide-react';
+import {
+  calcularTotalReceitas,
+  calcularTotalDespesas,
+} from '../finance/financialCore';
 
 interface SummaryCardsProps {
   rendaBase: number;
@@ -37,15 +41,12 @@ export function SummaryCards({
   setTutorialStep,
   finishTutorial
 }: SummaryCardsProps) {
-  const receitasExtras = transacoes
-    .filter((t) => t.tipo === 'receita')
-    .reduce((acc, t) => acc + t.valor, 0);
+
+  const receitasExtras = calcularTotalReceitas(transacoes);
 
   const totalReceitas = rendaBase + receitasExtras;
 
-  const totalDespesas = transacoes
-    .filter((t) => t.tipo === 'despesa')
-    .reduce((acc, t) => acc + t.valor, 0);
+  const totalDespesas = calcularTotalDespesas(transacoes);
 
   // Cálculo de Comprometimento de Renda
   const pctComprometido = totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
