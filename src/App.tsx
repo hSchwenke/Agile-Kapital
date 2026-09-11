@@ -1,6 +1,4 @@
 import { useState, useEffect, type SyntheticEvent } from 'react';
-import { auth } from './firebase';
-import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { Toaster, toast } from 'react-hot-toast';
 import { SummaryCards } from './components/SummaryCards';
 import { PeriodInsightCard } from './components/analytics/PeriodInsightCard';
@@ -9,9 +7,11 @@ import { LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } f
 import { TutorialPopover } from './components/TutorialPopover';
 import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
-import type { Transacao } from './domain/transaction';
-import { criarTransacao, deletarTransacao, observarTransacoes } from './services/transactionService';
-import { observarRenda, salvarRenda, } from './services/incomeService';
+import { criarTransacao, deletarTransacao } from './services/transactionService';
+import { salvarRenda } from './services/incomeService';
+import { useIncome } from './hooks/useIncome';
+import { useAuth } from './hooks/useAuth';
+import { useTransactions } from './hooks/useTransactions';
 
 const formatarMoeda = (valor: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
@@ -32,7 +32,7 @@ const formatarData = (dataISO?: string) => {
 };
 
 function App() {
-  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
+
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
@@ -40,11 +40,22 @@ function App() {
   const [filtroCategoria, setFiltroCategoria] = useState<CategoriaId | 'todas'>('todas');
   const [transacaoParaDeletar, setTransacaoParaDeletar] = useState<string | null>(null);
 
-  const [rendaFixa, setRendaFixa] = useState<number>(0);
-  const [rendaInput, setRendaInput] = useState('');
+  const {
+    user,
+    carregandoLogin,
+    loginComGoogle,
+    sair,
+  } = useAuth();
 
-  const [user, setUser] = useState<User | null>(null);
-  const [carregandoLogin, setCarregandoLogin] = useState(true);
+  const [mesCompetencia, setMesCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
+
+  const { transacoes } = useTransactions(
+    user?.uid,
+    mesCompetencia
+  );
+
+  const { rendaFixa } = useIncome(user?.uid);
+  const [rendaInput, setRendaInput] = useState('');
 
   const [showValues, setShowValues] = useState(true);
   const [modalRendaAberto, setModalRendaAberto] = useState(false);
@@ -72,8 +83,6 @@ function App() {
   };
 
   // --- LÓGICA DE COMPETÊNCIA ---
-  const [mesCompetencia, setMesCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
-
   const alterarMes = (delta: number) => {
     const [ano, mes] = mesCompetencia.split('-').map(Number);
     const data = new Date(ano, mes - 1 + delta, 1);
@@ -130,58 +139,6 @@ function App() {
 
   const alternarTema = () => {
     setTema(temaAtual => (temaAtual === 'dark' ? 'light' : 'dark'));
-  };
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (usuarioAtual) => {
-      if (!usuarioAtual) {
-        setTransacoes([]);
-        setRendaFixa(0);
-        setDescricao('');
-        setValor('');
-        setRendaInput('');
-        setMesCompetencia(new Date().toISOString().slice(0, 7));
-      }
-      setUser(usuarioAtual);
-      setCarregandoLogin(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribeTransacoes = observarTransacoes(
-      user.uid,
-      mesCompetencia,
-      setTransacoes
-    );
-
-    const unsubscribeRenda = observarRenda(
-      user.uid,
-      setRendaFixa
-    );
-
-    return () => {
-      unsubscribeTransacoes();
-      unsubscribeRenda();
-    };
-  }, [user, mesCompetencia]);
-
-  const loginComGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      toast.success('Login realizado com sucesso!');
-    } catch (error) {
-      console.error("Erro ao fazer login", error);
-      toast.error('Erro ao conectar com o Google.');
-    }
-  };
-
-  const sair = async () => {
-    await signOut(auth);
-    toast('Você saiu da conta', { icon: '👋' });
   };
 
   const salvarRendaFixa = async (evento: SyntheticEvent) => {
