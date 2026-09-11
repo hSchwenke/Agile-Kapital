@@ -1,6 +1,5 @@
 import { useState, useEffect, type SyntheticEvent } from 'react';
-import { db, auth } from './firebase';
-import { collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, setDoc, where } from 'firebase/firestore';
+import { auth } from './firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, type User } from 'firebase/auth';
 import { Toaster, toast } from 'react-hot-toast';
 import { SummaryCards } from './components/SummaryCards';
@@ -11,6 +10,8 @@ import { TutorialPopover } from './components/TutorialPopover';
 import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
 import type { Transacao } from './domain/transaction';
+import { criarTransacao, deletarTransacao, observarTransacoes } from './services/transactionService';
+import { observarRenda, salvarRenda, } from './services/incomeService';
 
 const formatarMoeda = (valor: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
@@ -150,29 +151,16 @@ function App() {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'transacoes'),
-      where('userId', '==', user.uid),
-      where('competencia', '==', mesCompetencia),
-      orderBy('data', 'asc')
+    const unsubscribeTransacoes = observarTransacoes(
+      user.uid,
+      mesCompetencia,
+      setTransacoes
     );
 
-    const unsubscribeTransacoes = onSnapshot(q, (snapshot) => {
-      const transacoesBanco: Transacao[] = [];
-      snapshot.forEach((doc) => {
-        transacoesBanco.push({ id: doc.id, ...doc.data() } as Transacao);
-      });
-      setTransacoes(transacoesBanco);
-    });
-
-    const docRef = doc(db, 'rendas', user.uid);
-    const unsubscribeRenda = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setRendaFixa(docSnap.data().valor);
-      } else {
-        setRendaFixa(0);
-      }
-    });
+    const unsubscribeRenda = observarRenda(
+      user.uid,
+      setRendaFixa
+    );
 
     return () => {
       unsubscribeTransacoes();
@@ -198,54 +186,63 @@ function App() {
 
   const salvarRendaFixa = async (evento: SyntheticEvent) => {
     evento.preventDefault();
+
     if (!user) return toast.error('Você precisa estar logado para salvar!');
     if (!rendaInput) return toast.error('Digite um valor para a receita!');
 
     try {
-      await setDoc(doc(db, 'rendas', user.uid), {
-        valor: Number(rendaInput)
-      });
+      await salvarRenda(
+        user.uid,
+        Number(rendaInput)
+      );
+
       setRendaInput('');
       setModalRendaAberto(false);
       toast.success('Receita atualizada!');
     } catch (error) {
-      console.error("Erro ao salvar renda: ", error);
+      console.error('Erro ao salvar renda: ', error);
       toast.error('Erro ao salvar receita.');
     }
   };
 
   const salvarTransacao = async (evento: SyntheticEvent) => {
     evento.preventDefault();
-    if (!user) return toast.error('Você precisa estar logado para salvar!');
-    if (!descricao || !valor) return toast.error('Preencha todos os campos!');
+
+    if (!user) {
+      return toast.error('Você precisa estar logado para salvar!');
+    }
+
+    if (!descricao || !valor) {
+      return toast.error('Preencha a descrição e o valor!');
+    }
 
     try {
-      await addDoc(collection(db, 'transacoes'), {
-        descricao: descricao,
+      await criarTransacao({
+        descricao,
         valor: Number(valor),
-        tipo: tipo,
-        categoria: categoria,
-        data: new Date().toISOString(),
+        tipo,
+        categoria,
         userId: user.uid,
-        competencia: mesCompetencia
+        competencia: mesCompetencia,
       });
 
       setDescricao('');
       setValor('');
-      setCategoria('outros');
       setTipo('despesa');
+      setCategoria('outros');
       setModalTransacaoAberto(false);
+
       toast.success('Transação adicionada!');
     } catch (error) {
-      console.error("Erro ao salvar transação: ", error);
-      toast.error('Erro ao adicionar transação.');
+      console.error('Erro ao salvar transação: ', error);
+      toast.error('Erro ao salvar transação.');
     }
   };
 
   const confirmarDelecao = async () => {
     if (!transacaoParaDeletar) return;
     try {
-      await deleteDoc(doc(db, 'transacoes', transacaoParaDeletar));
+      await deletarTransacao(transacaoParaDeletar);
       toast.success('Transação removida!');
     } catch (error) {
       console.error("Erro ao deletar transação: ", error);
