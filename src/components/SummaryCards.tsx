@@ -7,6 +7,7 @@ import {
   TrendingDown,
   Pencil
 } from 'lucide-react';
+import { centavosParaReais } from '../utils/money';
 import {
   calcularTotalReceitas,
   calcularTotalDespesas,
@@ -23,12 +24,12 @@ interface SummaryCardsProps {
   finishTutorial: () => void;
 }
 
-const formatarMoeda = (valor: number, show: boolean = true) => {
+const formatarMoeda = (valorCentavos: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(valor);
+  }).format(centavosParaReais(valorCentavos));
 };
 
 export function SummaryCards({

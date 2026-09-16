@@ -5,7 +5,7 @@ export function calcularTotalReceitas(
 ): number {
     return transacoes
         .filter((transacao) => transacao.tipo === 'receita')
-        .reduce((total, transacao) => total + transacao.valor, 0);
+        .reduce((total, transacao) => total + transacao.valorCentavos, 0);
 }
 
 export function calcularTotalDespesas(
@@ -13,7 +13,7 @@ export function calcularTotalDespesas(
 ): number {
     return transacoes
         .filter((transacao) => transacao.tipo === 'despesa')
-        .reduce((total, transacao) => total + transacao.valor, 0);
+        .reduce((total, transacao) => total + transacao.valorCentavos, 0);
 }
 
 export function calcularSaldo(
@@ -34,7 +34,7 @@ export function calcularDespesasPorCategoria(
         .reduce<Record<string, number>>((acc, transacao) => {
             const categoria = transacao.categoria || 'outros';
 
-            acc[categoria] = (acc[categoria] || 0) + transacao.valor;
+            acc[categoria] = (acc[categoria] || 0) + transacao.valorCentavos;
 
             return acc;
         }, {});

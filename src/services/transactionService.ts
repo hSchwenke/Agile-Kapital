@@ -4,7 +4,7 @@ import type { Transacao } from '../domain/transaction';
 
 interface CriarTransacaoInput {
     descricao: string;
-    valor: number;
+    valorCentavos: number;
     tipo: 'receita' | 'despesa';
     categoria?: string;
     userId: string;
@@ -14,6 +14,15 @@ interface CriarTransacaoInput {
 export async function criarTransacao(
     dados: CriarTransacaoInput
 ): Promise<void> {
+    if (
+        typeof dados.valorCentavos !== 'number' ||
+        !Number.isFinite(dados.valorCentavos) ||
+        !Number.isInteger(dados.valorCentavos) ||
+        dados.valorCentavos <= 0
+    ) {
+        throw new Error('Valor inválido. O valor da transação deve ser um número inteiro de centavos maior que zero.');
+    }
+
     await addDoc(collection(db, 'transacoes'), {
         ...dados,
         data: new Date().toISOString(),
@@ -42,9 +51,25 @@ export function observarTransacoes(
         const transacoesBanco: Transacao[] = [];
 
         snapshot.forEach((documento) => {
+            const dados = documento.data();
+
+            if (
+                typeof dados.valorCentavos !== 'number' ||
+                !Number.isFinite(dados.valorCentavos) ||
+                !Number.isInteger(dados.valorCentavos) ||
+                dados.valorCentavos <= 0
+            ) {
+                console.error(
+                    `Transação inválida ignorada: ${documento.id}`,
+                    dados
+                );
+
+                return;
+            }
+
             transacoesBanco.push({
                 id: documento.id,
-                ...documento.data(),
+                ...dados,
             } as Transacao);
         });
 

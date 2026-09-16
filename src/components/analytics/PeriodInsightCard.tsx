@@ -2,6 +2,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { CATEGORIAS, type CategoriaId } from '../../utils/categorias';
 import type { Transacao } from '../../domain/transaction';
+import { centavosParaReais } from '../../utils/money';
 import {
   calcularTotalDespesas,
   calcularDespesasPorCategoria,
@@ -35,9 +36,9 @@ export const PeriodInsightCard: React.FC<Props> = ({ transacoes, rendaBase, show
     }))
     .sort((a, b) => b.value - a.value);
 
-  const formatarMoeda = (val: number) => {
+  const formatarMoeda = (valCentavos: number) => {
     if (!showValues) return 'R$ •••••';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(centavosParaReais(valCentavos));
   };
 
   return (

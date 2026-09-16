@@ -8,13 +8,23 @@ import { db } from '../firebase';
 
 export function observarRenda(
     userId: string,
-    onChange: (valor: number) => void
+    onChange: (valorCentavos: number) => void
 ): () => void {
     const docRef = doc(db, 'rendas', userId);
 
     return onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
-            onChange(docSnap.data().valor);
+            const dados = docSnap.data();
+            if (
+                typeof dados?.valorCentavos === 'number' &&
+                Number.isFinite(dados.valorCentavos) &&
+                Number.isInteger(dados.valorCentavos) &&
+                dados.valorCentavos > 0
+            ) {
+                onChange(dados.valorCentavos);
+            } else {
+                onChange(0);
+            }
         } else {
             onChange(0);
         }
@@ -23,9 +33,18 @@ export function observarRenda(
 
 export async function salvarRenda(
     userId: string,
-    valor: number
+    valorCentavos: number
 ): Promise<void> {
+    if (
+        typeof valorCentavos !== 'number' ||
+        !Number.isFinite(valorCentavos) ||
+        !Number.isInteger(valorCentavos) ||
+        valorCentavos <= 0
+    ) {
+        throw new Error('Valor inválido. A renda deve ser um número inteiro de centavos maior que zero.');
+    }
+
     await setDoc(doc(db, 'rendas', userId), {
-        valor,
+        valorCentavos,
     });
 }

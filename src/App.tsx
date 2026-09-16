@@ -12,6 +12,8 @@ import { salvarRenda } from './services/incomeService';
 import { useIncome } from './hooks/useIncome';
 import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
+import { centavosParaReais, reaisParaCentavos } from './utils/money';
+
 
 const formatarMoeda = (valor: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
@@ -92,6 +94,11 @@ function App() {
   };
 
   const handleEditIncome = () => {
+    if (rendaFixa > 0) {
+      setRendaInput(centavosParaReais(rendaFixa).toString());
+    } else {
+      setRendaInput('');
+    }
     setModalRendaAberto(true);
   };
 
@@ -145,12 +152,22 @@ function App() {
     evento.preventDefault();
 
     if (!user) return toast.error('Você precisa estar logado para salvar!');
-    if (!rendaInput) return toast.error('Digite um valor para a receita!');
+    if (!rendaInput || rendaInput.trim() === '') return toast.error('Digite um valor para a receita!');
+
+    const valorNumerico = Number(rendaInput);
+    if (isNaN(valorNumerico) || !Number.isFinite(valorNumerico) || valorNumerico <= 0) {
+      return toast.error('Digite um valor válido maior que zero!');
+    }
+
+    const valorCentavos = reaisParaCentavos(valorNumerico);
+    if (!Number.isInteger(valorCentavos) || valorCentavos <= 0) {
+      return toast.error('Valor inválido!');
+    }
 
     try {
       await salvarRenda(
         user.uid,
-        Number(rendaInput)
+        valorCentavos
       );
 
       setRendaInput('');
@@ -169,14 +186,28 @@ function App() {
       return toast.error('Você precisa estar logado para salvar!');
     }
 
-    if (!descricao || !valor) {
-      return toast.error('Preencha a descrição e o valor!');
+    if (!descricao || !descricao.trim()) {
+      return toast.error('Preencha a descrição!');
+    }
+
+    if (!valor || valor.trim() === '') {
+      return toast.error('Preencha o valor!');
+    }
+
+    const valorNumerico = Number(valor);
+    if (isNaN(valorNumerico) || !Number.isFinite(valorNumerico) || valorNumerico <= 0) {
+      return toast.error('Digite um valor válido maior que zero!');
+    }
+
+    const valorCentavos = reaisParaCentavos(valorNumerico);
+    if (!Number.isInteger(valorCentavos) || valorCentavos <= 0) {
+      return toast.error('Valor inválido!');
     }
 
     try {
       await criarTransacao({
-        descricao,
-        valor: Number(valor),
+        descricao: descricao.trim(),
+        valorCentavos,
         tipo,
         categoria,
         userId: user.uid,
@@ -466,7 +497,7 @@ function App() {
                           </div>
 
                           <div className={`text-right shrink-0 font-semibold text-sm ${t.tipo === 'receita' ? 'text-emerald-600 dark:text-[#10b981]' : 'text-rose-600 dark:text-[#f43f5e]'}`}>
-                            {t.tipo === 'receita' ? '+' : '-'} {showValues ? formatarMoeda(t.valor) : 'R$ •••••'}
+                            {t.tipo === 'receita' ? '+' : '-'} {showValues ? formatarMoeda(centavosParaReais(t.valorCentavos)) : 'R$ •••••'}
                           </div>
                         </li>
                       );
