@@ -499,7 +499,6 @@ function App() {
           <div className="lg:col-span-1">
             <PeriodInsightCard
               transacoes={transacoes}
-              rendaBase={rendaFixa}
               showValues={showValues}
             />
           </div>
@@ -704,11 +703,10 @@ function App() {
                   setModoTransacao('a_vista');
                   setTipo('despesa');
                 }}
-                className={`py-1.5 rounded-md transition-all ${
-                  modoTransacao === 'a_vista'
-                    ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
+                className={`py-1.5 rounded-md transition-all ${modoTransacao === 'a_vista'
+                  ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
               >
                 À Vista
               </button>
@@ -721,11 +719,10 @@ function App() {
                     setCartaoSelecionadoId(cartoesAtivos[0].id);
                   }
                 }}
-                className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${
-                  modoTransacao === 'parcelado'
-                    ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
+                className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${modoTransacao === 'parcelado'
+                  ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
               >
                 <CreditCard size={13} />
                 Parcelado no Cartão

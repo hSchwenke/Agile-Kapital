@@ -26,6 +26,7 @@ interface SummaryCardsProps {
 
 const formatarMoeda = (valorCentavos: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
+
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
@@ -49,9 +50,18 @@ export function SummaryCards({
 
   const totalDespesas = calcularTotalDespesas(transacoes);
 
+  const saldo = totalReceitas - totalDespesas;
+
   // Cálculo de Comprometimento de Renda
-  const pctComprometido = totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
-  const pctExtras = rendaBase > 0 ? (receitasExtras / rendaBase) * 100 : 0;
+  const pctComprometido =
+    totalReceitas > 0
+      ? (totalDespesas / totalReceitas) * 100
+      : 0;
+
+  const pctExtras =
+    rendaBase > 0
+      ? (receitasExtras / rendaBase) * 100
+      : 0;
 
   // Definição de cores dinâmicas
   const getProgressColor = (pct: number) => {
@@ -61,116 +71,242 @@ export function SummaryCards({
   };
 
   const getTextColor = (pct: number) => {
-    if (pct >= 90) return 'text-rose-500 dark:text-rose-400';
-    if (pct >= 70) return 'text-amber-500 dark:text-amber-400';
+    if (pct >= 90) {
+      return 'text-rose-500 dark:text-rose-400';
+    }
+
+    if (pct >= 70) {
+      return 'text-amber-500 dark:text-amber-400';
+    }
+
     return 'text-emerald-600 dark:text-emerald-400';
   };
 
+  const getSaldoColor = () => {
+    if (saldo < 0) {
+      return 'text-rose-600 dark:text-rose-400';
+    }
+
+    return 'text-gray-900 dark:text-[#f4f4f5]';
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
-      {/* Card Receitas */}
-      <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
-              Receitas
-            </span>
-            <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
-              <TrendingUp size={18} />
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mb-1">Total Entradas</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
-            {formatarMoeda(totalReceitas, showValues)}
-          </h2>
-        </div>
+    <>
+      {/* Resumo compacto - Mobile */}
+      <div className="sm:hidden">
+        <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-4 shadow-sm transition-colors duration-300">
 
-        {/* Barra de Progresso de Entradas Extras */}
-        <div className="my-4 space-y-1.5">
-          <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
-            <span>Receita extra</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-              +{pctExtras.toFixed(0)}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
-            <div
-              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(pctExtras, 100)}%` }}
-            />
-          </div>
-        </div>
+          {/* Saldo */}
+          <div className="pb-4">
+            <p className="text-xs font-semibold tracking-wider text-gray-500 dark:text-[#a1a1aa] uppercase mb-1">
+              Saldo do mês
+            </p>
 
-        {/* Rodapé */}
-        <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
-          <span className="truncate">
-            Alterar Renda Base
-          </span>
-
-          <div className="relative flex items-center">
-            <button
-              onClick={onEditIncome}
-              className={`p-1.5 hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors ${getHighlightClass(
-                showTutorial && tutorialStep === 3
-              )}`}
-              title="Editar renda base"
+            <h2
+              className={`text-2xl font-bold tracking-tight ${getSaldoColor()}`}
             >
-              <Pencil size={14} />
-            </button>
+              {formatarMoeda(saldo, showValues)}
+            </h2>
+          </div>
 
-            {/* Passo 3 com posicionamento top-right para mobile */}
-            <TutorialPopover
-              showTutorial={showTutorial}
-              tutorialStep={tutorialStep}
-              stepIndex={3}
-              text="Clique no lápis para definir ou alterar sua renda mensal."
-              setTutorialStep={setTutorialStep}
-              finishTutorial={finishTutorial}
-              arrowPosition="bottom-right"
-            />
+          {/* Receitas e Despesas */}
+          <div className="grid grid-cols-2 border-t border-gray-100 dark:border-[#27272a] pt-3">
+
+            {/* Receitas */}
+            <div className="pr-3 border-r border-gray-100 dark:border-[#27272a]">
+              <div className="flex items-center justify-between mb-2 min-h-[24px]">
+                <span className="text-[11px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
+                  Receitas
+                </span>
+
+                <div className="relative">
+                  <button
+                    onClick={onEditIncome}
+                    className={`p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-md hover:bg-gray-100 dark:hover:bg-[#27272a] transition-colors ${getHighlightClass(
+                      showTutorial && tutorialStep === 3
+                    )}`}
+                    title="Editar renda base"
+                    aria-label="Editar renda base"
+                  >
+                    <Pencil size={13} />
+                  </button>
+
+                  <TutorialPopover
+                    showTutorial={showTutorial}
+                    tutorialStep={tutorialStep}
+                    stepIndex={3}
+                    text="Clique no lápis para definir ou alterar sua renda mensal."
+                    setTutorialStep={setTutorialStep}
+                    finishTutorial={finishTutorial}
+                    arrowPosition="bottom-right"
+                  />
+                </div>
+              </div>
+
+              <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                {formatarMoeda(totalReceitas, showValues)}
+              </p>
+            </div>
+
+            {/* Despesas */}
+            <div className="pl-3">
+              <div className="flex items-center justify-between mb-2 min-h-[24px]">
+                <span className="text-[11px] font-semibold tracking-wider text-rose-600 dark:text-rose-400 uppercase">
+                  Despesas
+                </span>
+
+                <div className="w-[21px] h-[21px]" aria-hidden="true" />
+              </div>
+
+              <p className="text-base font-bold text-rose-600 dark:text-rose-400 truncate">
+                {formatarMoeda(totalDespesas, showValues)}
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {/* Card Despesas */}
-      <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold tracking-wider text-rose-600 dark:text-rose-400 uppercase">
-              Despesas
-            </span>
-            <div className="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-600 dark:text-rose-400">
-              <TrendingDown size={18} />
+      {/* Cards atuais - Tablet/Desktop */}
+      <div className="hidden sm:grid sm:grid-cols-2 gap-4 h-full">
+
+        {/* Card Receitas */}
+        <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
+                Receitas
+              </span>
+
+              <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+                <TrendingUp size={18} />
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mb-1">
+              Total Entradas
+            </p>
+
+            <h2 className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+              {formatarMoeda(totalReceitas, showValues)}
+            </h2>
+          </div>
+
+          {/* Barra de Progresso de Entradas Extras */}
+          <div className="my-4 space-y-1.5">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
+              <span>Receita extra</span>
+
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                +{pctExtras.toFixed(0)}%
+              </span>
+            </div>
+
+            <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.min(pctExtras, 100)}%`
+                }}
+              />
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mb-1">Total Saídas</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
-            {formatarMoeda(totalDespesas, showValues)}
-          </h2>
+
+          {/* Rodapé */}
+          <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
+            <span className="truncate">
+              Alterar Renda Base
+            </span>
+
+            <div className="relative flex items-center">
+              <button
+                onClick={onEditIncome}
+                className={`p-1.5 hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors ${getHighlightClass(
+                  showTutorial && tutorialStep === 3
+                )}`}
+                title="Editar renda base"
+              >
+                <Pencil size={14} />
+              </button>
+
+              <TutorialPopover
+                showTutorial={showTutorial}
+                tutorialStep={tutorialStep}
+                stepIndex={3}
+                text="Clique no lápis para definir ou alterar sua renda mensal."
+                setTutorialStep={setTutorialStep}
+                finishTutorial={finishTutorial}
+                arrowPosition="bottom-right"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Barra de Progresso do Comprometimento da Renda */}
-        <div className="my-4 space-y-1.5">
-          <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
-            <span>Comprometimento da renda</span>
-            <span className={`font-semibold ${getTextColor(pctComprometido)}`}>
-              {pctComprometido.toFixed(1)}%
-            </span>
+        {/* Card Despesas */}
+        <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold tracking-wider text-rose-600 dark:text-rose-400 uppercase">
+                Despesas
+              </span>
+
+              <div className="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-600 dark:text-rose-400">
+                <TrendingDown size={18} />
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mb-1">
+              Total Saídas
+            </p>
+
+            <h2 className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400 tracking-tight">
+              {formatarMoeda(totalDespesas, showValues)}
+            </h2>
           </div>
-          <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
+
+          {/* Barra de Progresso do Comprometimento da Renda */}
+          <div className="my-4 space-y-1.5">
+            <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
+              <span>Comprometimento da renda</span>
+
+              <span
+                className={`font-semibold ${getTextColor(
+                  pctComprometido
+                )}`}
+              >
+                {pctComprometido.toFixed(1)}%
+              </span>
+            </div>
+
+            <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${getProgressColor(
+                  pctComprometido
+                )}`}
+                style={{
+                  width: `${Math.min(
+                    pctComprometido,
+                    100
+                  )}%`
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Rodapé */}
+          <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
+            <span>
+              Gastos registrados no mês
+            </span>
+
             <div
-              className={`h-full rounded-full transition-all duration-500 ${getProgressColor(pctComprometido)}`}
-              style={{ width: `${Math.min(pctComprometido, 100)}%` }}
+              className="w-[27px] h-[27px]"
+              aria-hidden="true"
             />
           </div>
         </div>
 
-        {/* Rodapé */}
-        <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
-          <span>Gastos registrados no mês</span>
-          <div className="w-[27px] h-[27px]" aria-hidden="true" />
-        </div>
       </div>
-    </div>
+    </>
   );
 }
