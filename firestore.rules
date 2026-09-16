@@ -24,6 +24,52 @@ service cloud.firestore {
                     && request.resource.data.valorCentavos > 0;
     }
 
+    match /cartoes/{cartaoId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.diaFechamento is int
+                    && request.resource.data.diaFechamento >= 1
+                    && request.resource.data.diaFechamento <= 31
+                    && request.resource.data.diaVencimento is int
+                    && request.resource.data.diaVencimento >= 1
+                    && request.resource.data.diaVencimento <= 31;
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.diaFechamento is int
+                    && request.resource.data.diaFechamento >= 1
+                    && request.resource.data.diaFechamento <= 31
+                    && request.resource.data.diaVencimento is int
+                    && request.resource.data.diaVencimento >= 1
+                    && request.resource.data.diaVencimento <= 31;
+    }
+
+    match /parcelamentos/{parcelamentoId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.valorTotalCentavos is int
+                    && request.resource.data.valorTotalCentavos > 0
+                    && request.resource.data.totalParcelas is int
+                    && request.resource.data.totalParcelas >= 2
+                    && request.resource.data.totalParcelas <= 72;
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.valorTotalCentavos is int
+                    && request.resource.data.valorTotalCentavos > 0
+                    && request.resource.data.totalParcelas is int
+                    && request.resource.data.totalParcelas >= 2
+                    && request.resource.data.totalParcelas <= 72;
+    }
+
     match /rendas/{userId} {
       allow read: if request.auth != null
                   && request.auth.uid == userId;

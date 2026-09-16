@@ -41,7 +41,7 @@ export async function salvarRenda(
         !Number.isInteger(valorCentavos) ||
         valorCentavos <= 0
     ) {
-        throw new Error('Valor inválido. A renda deve ser um número inteiro de centavos maior que zero.');
+        throw new Error('Valor inválido. A renda deve ser um valor válido.');
     }
 
     await setDoc(doc(db, 'rendas', userId), {

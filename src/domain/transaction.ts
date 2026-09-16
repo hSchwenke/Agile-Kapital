@@ -9,4 +9,8 @@ export interface Transacao {
     data?: string;
     userId: string;
     competencia: string;
+    parcelamentoId?: string;
+    cartaoId?: string;
+    numeroParcela?: number;
+    totalParcelas?: number;
 }

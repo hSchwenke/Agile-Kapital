@@ -20,7 +20,7 @@ export async function criarTransacao(
         !Number.isInteger(dados.valorCentavos) ||
         dados.valorCentavos <= 0
     ) {
-        throw new Error('Valor inválido. O valor da transação deve ser um número inteiro de centavos maior que zero.');
+        throw new Error('Valor inválido. O valor da transação deve ser válido.');
     }
 
     await addDoc(collection(db, 'transacoes'), {

@@ -3,16 +3,26 @@ import { Toaster, toast } from 'react-hot-toast';
 import { SummaryCards } from './components/SummaryCards';
 import { PeriodInsightCard } from './components/analytics/PeriodInsightCard';
 import { CATEGORIAS, LISTA_CATEGORIAS, type CategoriaId } from './utils/categorias';
-import { LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } from 'lucide-react';
+import { CreditCard, LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } from 'lucide-react';
 import { TutorialPopover } from './components/TutorialPopover';
 import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
 import { criarTransacao, deletarTransacao } from './services/transactionService';
 import { salvarRenda } from './services/incomeService';
+import { criarParcelamento } from './services/installmentService';
 import { useIncome } from './hooks/useIncome';
 import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
+import { useCards } from './hooks/useCards';
+import { useInstallments } from './hooks/useInstallments';
+import { CardsModal } from './components/cards/CardsModal';
 import { centavosParaReais, reaisParaCentavos } from './utils/money';
+import {
+  calcularCompetenciaInicial,
+  dividirParcelas,
+  calcularProximaCompetencia,
+} from './finance/financialCore';
+import { getDataLocalHoje, getCompetenciaLocalHoje } from './utils/date';
 
 
 const formatarMoeda = (valor: number, show: boolean = true) => {
@@ -49,7 +59,7 @@ function App() {
     sair,
   } = useAuth();
 
-  const [mesCompetencia, setMesCompetencia] = useState(() => new Date().toISOString().slice(0, 7));
+  const [mesCompetencia, setMesCompetencia] = useState(() => getCompetenciaLocalHoje());
 
   const { transacoes } = useTransactions(
     user?.uid,
@@ -59,9 +69,21 @@ function App() {
   const { rendaFixa } = useIncome(user?.uid);
   const [rendaInput, setRendaInput] = useState('');
 
+  const { cartoes, cartoesAtivos } = useCards(user?.uid);
+  const { parcelamentos } = useInstallments(user?.uid);
+
   const [showValues, setShowValues] = useState(true);
   const [modalRendaAberto, setModalRendaAberto] = useState(false);
   const [modalTransacaoAberto, setModalTransacaoAberto] = useState(false);
+  const [modalCartoesAberto, setModalCartoesAberto] = useState(false);
+
+  // Estados de Nova Transação (À vista ou Parcelada)
+  const [modoTransacao, setModoTransacao] = useState<'a_vista' | 'parcelado'>('a_vista');
+  const [cartaoSelecionadoId, setCartaoSelecionadoId] = useState<string>('');
+  const [totalParcelasInput, setTotalParcelasInput] = useState<number>(2);
+  const [dataCompraInput, setDataCompraInput] = useState<string>(() => getDataLocalHoje());
+  const [competenciaInicialInput, setCompetenciaInicialInput] = useState<string>('');
+  const [competenciaEditadaManualmente, setCompetenciaEditadaManualmente] = useState(false);
 
   // --- TUTORIAL ONBOARDING ---
   const [showTutorial, setShowTutorial] = useState(false);
@@ -101,6 +123,36 @@ function App() {
     }
     setModalRendaAberto(true);
   };
+
+  const abrirModalNovaTransacao = () => {
+    setModoTransacao('a_vista');
+    setDescricao('');
+    setValor('');
+    setTipo('despesa');
+    setCategoria('outros');
+    const hoje = getDataLocalHoje();
+    setDataCompraInput(hoje);
+    const cartaoPadrao = cartoesAtivos[0];
+    if (cartaoPadrao) {
+      setCartaoSelecionadoId(cartaoPadrao.id);
+      setCompetenciaInicialInput(calcularCompetenciaInicial(hoje, cartaoPadrao.diaFechamento));
+    } else {
+      setCartaoSelecionadoId('');
+      setCompetenciaInicialInput(getCompetenciaLocalHoje());
+    }
+    setTotalParcelasInput(2);
+    setCompetenciaEditadaManualmente(false);
+    setModalTransacaoAberto(true);
+  };
+
+  useEffect(() => {
+    if (!competenciaEditadaManualmente && cartaoSelecionadoId && dataCompraInput) {
+      const cartao = cartoes.find((c) => c.id === cartaoSelecionadoId);
+      if (cartao) {
+        setCompetenciaInicialInput(calcularCompetenciaInicial(dataCompraInput, cartao.diaFechamento));
+      }
+    }
+  }, [dataCompraInput, cartaoSelecionadoId, cartoes, competenciaEditadaManualmente]);
 
   const getNomeMesAno = () => {
     const [ano, mes] = mesCompetencia.split('-').map(Number);
@@ -202,6 +254,40 @@ function App() {
     const valorCentavos = reaisParaCentavos(valorNumerico);
     if (!Number.isInteger(valorCentavos) || valorCentavos <= 0) {
       return toast.error('Valor inválido!');
+    }
+
+    if (modoTransacao === 'parcelado') {
+      if (!cartaoSelecionadoId) {
+        return toast.error('Selecione um cartão para a compra parcelada!');
+      }
+      if (totalParcelasInput < 2 || totalParcelasInput > 72) {
+        return toast.error('O número de parcelas deve ser entre 2 e 72!');
+      }
+      if (!competenciaInicialInput || !/^\d{4}-\d{2}$/.test(competenciaInicialInput)) {
+        return toast.error('Competência inicial inválida!');
+      }
+
+      try {
+        await criarParcelamento({
+          userId: user.uid,
+          cartaoId: cartaoSelecionadoId,
+          descricao: descricao.trim(),
+          categoria,
+          valorTotalCentavos: valorCentavos,
+          totalParcelas: totalParcelasInput,
+          dataCompra: dataCompraInput,
+          competenciaInicial: competenciaInicialInput,
+        });
+
+        setDescricao('');
+        setValor('');
+        setModalTransacaoAberto(false);
+        toast.success('Compra parcelada registrada com sucesso!');
+      } catch (error) {
+        console.error('Erro ao salvar parcelamento: ', error);
+        toast.error('Erro ao registrar compra parcelada.');
+      }
+      return;
     }
 
     try {
@@ -363,20 +449,34 @@ function App() {
               </button>
             </div>
 
-            <div className="relative flex items-center">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setModalTransacaoAberto(true)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-md active:scale-95 shadow-lg shadow-purple-500/25 ${getHighlightClass(showTutorial && tutorialStep === 4)}`}
+                onClick={() => setModalCartoesAberto(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-sm transition-all"
+                title="Cartões de Crédito"
+                aria-label="Cartões"
               >
-                <Plus size={14} />
-                Nova Transação
+                <CreditCard size={14} className="text-purple-600 dark:text-purple-400" />
+                <span className="hidden sm:inline">Cartões</span>
               </button>
-              <TutorialPopover
-                showTutorial={showTutorial} tutorialStep={tutorialStep}
-                setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
-                stepIndex={4} text="Para registrar entradas ou saídas, basta selecionar 'Nova Transação'."
-                arrowPosition="top"
-              />
+
+              <div className="relative flex items-center">
+                <button
+                  onClick={abrirModalNovaTransacao}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-md active:scale-95 shadow-lg shadow-purple-500/25 ${getHighlightClass(showTutorial && tutorialStep === 4)}`}
+                  title="Nova Transação"
+                  aria-label="Nova Transação"
+                >
+                  <Plus size={14} />
+                  <span className="hidden sm:inline">Nova Transação</span>
+                </button>
+                <TutorialPopover
+                  showTutorial={showTutorial} tutorialStep={tutorialStep}
+                  setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
+                  stepIndex={4} text="Para registrar entradas ou saídas, basta selecionar 'Nova Transação'."
+                  arrowPosition="top"
+                />
+              </div>
             </div>
           </div>
         </header>
@@ -487,6 +587,12 @@ function App() {
                             <div className="flex flex-col min-w-0 flex-1">
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 truncate">
                                 <span className="font-medium text-gray-900 dark:text-white text-sm truncate">{t.descricao}</span>
+                                {t.numeroParcela && t.totalParcelas && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/60 rounded-md shrink-0 w-max border border-purple-200 dark:border-purple-800/40">
+                                    <CreditCard size={10} />
+                                    {t.numeroParcela}/{t.totalParcelas}
+                                  </span>
+                                )}
                                 <span className={`whitespace-nowrap inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full shrink-0 ${categoriaDef.colorClass} w-max`}>
                                   <CategoriaIcon className="w-3 h-3" />
                                   {categoriaDef.label}
@@ -583,19 +689,104 @@ function App() {
       {modalTransacaoAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
           <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-md w-full transform transition-all">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Nova Transação</h3>
               <button onClick={() => setModalTransacaoAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                 <X size={20} />
               </button>
             </div>
 
+            {/* Alternador de Modo: À Vista vs Parcelado no Cartão */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-[#121214] rounded-lg mb-4 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => {
+                  setModoTransacao('a_vista');
+                  setTipo('despesa');
+                }}
+                className={`py-1.5 rounded-md transition-all ${
+                  modoTransacao === 'a_vista'
+                    ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                À Vista
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModoTransacao('parcelado');
+                  setTipo('despesa');
+                  if (!cartaoSelecionadoId && cartoesAtivos[0]) {
+                    setCartaoSelecionadoId(cartoesAtivos[0].id);
+                  }
+                }}
+                className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                  modoTransacao === 'parcelado'
+                    ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+              >
+                <CreditCard size={13} />
+                Parcelado no Cartão
+              </button>
+            </div>
+
             <form onSubmit={salvarTransacao} className="space-y-4">
+              {modoTransacao === 'parcelado' && (
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Cartão de Crédito</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalTransacaoAberto(false);
+                        setModalCartoesAberto(true);
+                      }}
+                      className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
+                    >
+                      + Gerenciar Cartões
+                    </button>
+                  </div>
+                  {cartoesAtivos.length === 0 ? (
+                    <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex justify-between items-center">
+                      <span>Nenhum cartão ativo cadastrado.</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalTransacaoAberto(false);
+                          setModalCartoesAberto(true);
+                        }}
+                        className="font-semibold underline"
+                      >
+                        Cadastrar cartão
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={cartaoSelecionadoId}
+                      onChange={(e) => {
+                        setCartaoSelecionadoId(e.target.value);
+                        setCompetenciaEditadaManualmente(false);
+                      }}
+                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                      required
+                    >
+                      {cartoesAtivos.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nome} ({c.banco}) - Fecha dia {c.diaFechamento}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Descrição</label>
                 <input
                   type="text"
-                  placeholder="Ex: Conta de Luz"
+                  placeholder={modoTransacao === 'parcelado' ? 'Ex: Notebook Dell' : 'Ex: Conta de Luz'}
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors"
@@ -603,38 +794,136 @@ function App() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor (R$)</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    step="0.01"
-                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                </div>
+              {modoTransacao === 'parcelado' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Data da Compra</label>
+                      <input
+                        type="date"
+                        value={dataCompraInput}
+                        onChange={(e) => {
+                          setDataCompraInput(e.target.value);
+                          setCompetenciaEditadaManualmente(false);
+                        }}
+                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Tipo</label>
-                  <div className="relative">
-                    <select
-                      value={tipo}
-                      onChange={(e) => setTipo(e.target.value as 'receita' | 'despesa')}
-                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors appearance-none cursor-pointer pr-8"
-                    >
-                      <option value="despesa">Despesa</option>
-                      <option value="receita">Receita</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Parcelas (2 a 72x)</label>
+                      <select
+                        value={totalParcelasInput}
+                        onChange={(e) => setTotalParcelasInput(Number(e.target.value))}
+                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                      >
+                        {Array.from({ length: 71 }, (_, i) => i + 2).map((num) => (
+                          <option key={num} value={num}>
+                            {num}x parcelas
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor Total (R$)</label>
+                      <input
+                        type="number"
+                        placeholder="0.00"
+                        value={valor}
+                        onChange={(e) => setValor(e.target.value)}
+                        step="0.01"
+                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Início</label>
+                        <span className="text-[10px] text-gray-400">
+                          {competenciaEditadaManualmente ? 'Manual' : 'Automático'}
+                        </span>
+                      </div>
+                      <input
+                        type="month"
+                        value={competenciaInicialInput}
+                        onChange={(e) => {
+                          setCompetenciaInicialInput(e.target.value);
+                          setCompetenciaEditadaManualmente(true);
+                        }}
+                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview das Parcelas usando dividirParcelas */}
+                  {Number(valor) > 0 && totalParcelasInput >= 2 && totalParcelasInput <= 72 && (
+                    (() => {
+                      const centavos = reaisParaCentavos(Number(valor));
+                      if (!Number.isInteger(centavos) || centavos <= 0) return null;
+                      const parcelas = dividirParcelas(centavos, totalParcelasInput);
+                      return (
+                        <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-lg text-xs space-y-1.5">
+                          <div className="font-semibold text-purple-900 dark:text-purple-300 flex justify-between">
+                            <span>Preview das Parcelas (Soma: {formatarMoeda(centavosParaReais(centavos))})</span>
+                            <span>{totalParcelasInput}x</span>
+                          </div>
+                          <div className="max-h-24 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                            {parcelas.map((pCentavos, idx) => {
+                              const comp = calcularProximaCompetencia(competenciaInicialInput || getCompetenciaLocalHoje(), idx);
+                              return (
+                                <div key={idx} className="flex justify-between text-gray-600 dark:text-[#a1a1aa] text-[11px]">
+                                  <span>Parcela {idx + 1}/{totalParcelasInput} ({comp})</span>
+                                  <span className="font-medium text-gray-900 dark:text-[#f4f4f5]">
+                                    {formatarMoeda(centavosParaReais(pCentavos))}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()
+                  )}
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor (R$)</label>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={valor}
+                      onChange={(e) => setValor(e.target.value)}
+                      step="0.01"
+                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Tipo</label>
+                    <div className="relative">
+                      <select
+                        value={tipo}
+                        onChange={(e) => setTipo(e.target.value as 'receita' | 'despesa')}
+                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors appearance-none cursor-pointer pr-8"
+                      >
+                        <option value="despesa">Despesa</option>
+                        <option value="receita">Receita</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Categoria</label>
@@ -668,15 +957,25 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors shadow-sm"
+                  disabled={modoTransacao === 'parcelado' && cartoesAtivos.length === 0}
+                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
                 >
-                  Adicionar
+                  {modoTransacao === 'parcelado' ? 'Registrar Parcelamento' : 'Adicionar'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Modal de Cartões de Crédito */}
+      <CardsModal
+        isOpen={modalCartoesAberto}
+        onClose={() => setModalCartoesAberto(false)}
+        userId={user.uid}
+        cartoes={cartoes}
+        parcelamentos={parcelamentos}
+      />
     </div>
   );
 }
