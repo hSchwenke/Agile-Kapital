@@ -107,6 +107,21 @@ service cloud.firestore {
                     && request.resource.data.competenciaInicial is string;
     }
 
+    // Pluggy Items por usuário (subcoleção de users)
+    // Leitura permitida apenas para o usuário dono.
+    // Escrita bloqueada no client — somente o backend (Admin SDK) pode criar/atualizar.
+    match /users/{userId}/pluggyItems/{itemId} {
+      allow read: if request.auth != null
+                  && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Índice interno de ownership de Items Pluggy
+    // NUNCA acessível pelo frontend — somente o backend (Admin SDK) opera nesta coleção.
+    match /pluggyItemOwners/{itemId} {
+      allow read, write: if false;
+    }
+
     // Metas
     match /metas/{metaId} {
       allow read, delete: if request.auth != null
