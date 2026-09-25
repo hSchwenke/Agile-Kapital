@@ -20,12 +20,12 @@ O Agile Kapital é uma aplicação de gestão financeira pessoal desenvolvida pa
 
 # Tecnologias Utilizadas
 
-React
-TypeScript
-Vite
-Firebase Authentication
-Cloud Firestore
-Firebase Admin SDK
-Vercel — hospedagem e funções server-side
-Pluggy — integração com Open Finance
-CSS3 (Flexbox, Media Queries e Variáveis CSS)
+- React
+- TypeScript
+- Vite
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Admin SDK
+- Vercel — hospedagem e funções server-side
+- Pluggy — integração com Open Finance
+- CSS3 (Flexbox, Media Queries e Variáveis CSS)
