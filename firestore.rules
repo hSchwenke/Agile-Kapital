@@ -3,11 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Usuários
     match /users/{userId} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
     }
 
+    // Transações
     match /transacoes/{transacaoId} {
       allow read, delete: if request.auth != null
                           && resource.data.userId == request.auth.uid;
@@ -24,72 +26,7 @@ service cloud.firestore {
                     && request.resource.data.valorCentavos > 0;
     }
 
-    match /cartoes/{cartaoId} {
-      allow read, delete: if request.auth != null
-                          && resource.data.userId == request.auth.uid;
-
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.diaFechamento is int
-                    && request.resource.data.diaFechamento >= 1
-                    && request.resource.data.diaFechamento <= 31
-                    && request.resource.data.diaVencimento is int
-                    && request.resource.data.diaVencimento >= 1
-                    && request.resource.data.diaVencimento <= 31;
-
-      allow update: if request.auth != null
-                    && resource.data.userId == request.auth.uid
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.diaFechamento is int
-                    && request.resource.data.diaFechamento >= 1
-                    && request.resource.data.diaFechamento <= 31
-                    && request.resource.data.diaVencimento is int
-                    && request.resource.data.diaVencimento >= 1
-                    && request.resource.data.diaVencimento <= 31;
-    }
-
-    match /parcelamentos/{parcelamentoId} {
-      allow read, delete: if request.auth != null
-                          && resource.data.userId == request.auth.uid;
-
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.valorTotalCentavos is int
-                    && request.resource.data.valorTotalCentavos > 0
-                    && request.resource.data.totalParcelas is int
-                    && request.resource.data.totalParcelas >= 2
-                    && request.resource.data.totalParcelas <= 72;
-
-      allow update: if request.auth != null
-                    && resource.data.userId == request.auth.uid
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.valorTotalCentavos is int
-                    && request.resource.data.valorTotalCentavos > 0
-                    && request.resource.data.totalParcelas is int
-                    && request.resource.data.totalParcelas >= 2
-                    && request.resource.data.totalParcelas <= 72;
-    }
-
-    match /metas/{metaId} {
-      allow read, delete: if request.auth != null
-                          && resource.data.userId == request.auth.uid;
-
-      allow create: if request.auth != null
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.valorAlvoCentavos is int
-                    && request.resource.data.valorAlvoCentavos > 0
-                    && request.resource.data.valorAtualCentavos is int
-                    && request.resource.data.valorAtualCentavos >= 0;
-
-      allow update: if request.auth != null
-                    && resource.data.userId == request.auth.uid
-                    && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.valorAlvoCentavos is int
-                    && request.resource.data.valorAlvoCentavos > 0
-                    && request.resource.data.valorAtualCentavos is int
-                    && request.resource.data.valorAtualCentavos >= 0;
-    }
-
+    // Rendas
     match /rendas/{userId} {
       allow read: if request.auth != null
                   && request.auth.uid == userId;
@@ -98,6 +35,103 @@ service cloud.firestore {
                    && request.auth.uid == userId
                    && request.resource.data.valorCentavos is int
                    && request.resource.data.valorCentavos > 0;
+    }
+
+    // Cartões
+    match /cartoes/{cartaoId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.nome is string
+                    && request.resource.data.nome.size() > 0
+                    && request.resource.data.banco is string
+                    && request.resource.data.banco.size() > 0
+                    && request.resource.data.ativo is bool
+                    && request.resource.data.diaFechamento is int
+                    && request.resource.data.diaFechamento >= 1
+                    && request.resource.data.diaFechamento <= 31
+                    && request.resource.data.diaVencimento is int
+                    && request.resource.data.diaVencimento >= 1
+                    && request.resource.data.diaVencimento <= 31;
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.nome is string
+                    && request.resource.data.nome.size() > 0
+                    && request.resource.data.banco is string
+                    && request.resource.data.banco.size() > 0
+                    && request.resource.data.ativo is bool
+                    && request.resource.data.diaFechamento is int
+                    && request.resource.data.diaFechamento >= 1
+                    && request.resource.data.diaFechamento <= 31
+                    && request.resource.data.diaVencimento is int
+                    && request.resource.data.diaVencimento >= 1
+                    && request.resource.data.diaVencimento <= 31;
+    }
+
+    // Parcelamentos
+    match /parcelamentos/{parcelamentoId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.cartaoId is string
+                    && request.resource.data.cartaoId.size() > 0
+                    && request.resource.data.descricao is string
+                    && request.resource.data.descricao.size() > 0
+                    && request.resource.data.valorTotalCentavos is int
+                    && request.resource.data.valorTotalCentavos > 0
+                    && request.resource.data.totalParcelas is int
+                    && request.resource.data.totalParcelas >= 2
+                    && request.resource.data.totalParcelas <= 72
+                    && request.resource.data.dataCompra is string
+                    && request.resource.data.competenciaInicial is string;
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.cartaoId is string
+                    && request.resource.data.cartaoId.size() > 0
+                    && request.resource.data.descricao is string
+                    && request.resource.data.descricao.size() > 0
+                    && request.resource.data.valorTotalCentavos is int
+                    && request.resource.data.valorTotalCentavos > 0
+                    && request.resource.data.totalParcelas is int
+                    && request.resource.data.totalParcelas >= 2
+                    && request.resource.data.totalParcelas <= 72
+                    && request.resource.data.dataCompra is string
+                    && request.resource.data.competenciaInicial is string;
+    }
+
+    // Metas
+    match /metas/{metaId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.nome is string
+                    && request.resource.data.nome.size() > 0
+                    && request.resource.data.valorAlvoCentavos is int
+                    && request.resource.data.valorAlvoCentavos > 0
+                    && request.resource.data.valorAtualCentavos is int
+                    && request.resource.data.valorAtualCentavos >= 0
+                    && request.resource.data.status in ['ativa', 'concluida', 'arquivada'];
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.nome is string
+                    && request.resource.data.nome.size() > 0
+                    && request.resource.data.valorAlvoCentavos is int
+                    && request.resource.data.valorAlvoCentavos > 0
+                    && request.resource.data.valorAtualCentavos is int
+                    && request.resource.data.valorAtualCentavos >= 0
+                    && request.resource.data.status in ['ativa', 'concluida', 'arquivada'];
     }
 
   }
