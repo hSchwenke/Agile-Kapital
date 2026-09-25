@@ -70,6 +70,26 @@ service cloud.firestore {
                     && request.resource.data.totalParcelas <= 72;
     }
 
+    match /metas/{metaId} {
+      allow read, delete: if request.auth != null
+                          && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.valorAlvoCentavos is int
+                    && request.resource.data.valorAlvoCentavos > 0
+                    && request.resource.data.valorAtualCentavos is int
+                    && request.resource.data.valorAtualCentavos >= 0;
+
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.valorAlvoCentavos is int
+                    && request.resource.data.valorAlvoCentavos > 0
+                    && request.resource.data.valorAtualCentavos is int
+                    && request.resource.data.valorAtualCentavos >= 0;
+    }
+
     match /rendas/{userId} {
       allow read: if request.auth != null
                   && request.auth.uid == userId;

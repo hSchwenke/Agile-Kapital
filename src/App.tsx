@@ -3,7 +3,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { SummaryCards } from './components/SummaryCards';
 import { PeriodInsightCard } from './components/analytics/PeriodInsightCard';
 import { CATEGORIAS, LISTA_CATEGORIAS, type CategoriaId } from './utils/categorias';
-import { CreditCard, LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle } from 'lucide-react';
+import { CreditCard, LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle, PiggyBank } from 'lucide-react';
 import { TutorialPopover } from './components/TutorialPopover';
 import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
@@ -16,6 +16,8 @@ import { useTransactions } from './hooks/useTransactions';
 import { useCards } from './hooks/useCards';
 import { useInstallments } from './hooks/useInstallments';
 import { CardsModal } from './components/cards/CardsModal';
+import { useGoals } from './hooks/useGoals';
+import { GoalsModal } from './components/goals/GoalsModal';
 import { centavosParaReais, reaisParaCentavos } from './utils/money';
 import {
   calcularCompetenciaInicial,
@@ -71,11 +73,13 @@ function App() {
 
   const { cartoes, cartoesAtivos } = useCards(user?.uid);
   const { parcelamentos } = useInstallments(user?.uid);
+  const { metas } = useGoals(user?.uid);
 
   const [showValues, setShowValues] = useState(true);
   const [modalRendaAberto, setModalRendaAberto] = useState(false);
   const [modalTransacaoAberto, setModalTransacaoAberto] = useState(false);
   const [modalCartoesAberto, setModalCartoesAberto] = useState(false);
+  const [modalMetasAberto, setModalMetasAberto] = useState(false);
 
   // Estados de Nova Transação (À vista ou Parcelada)
   const [modoTransacao, setModoTransacao] = useState<'a_vista' | 'parcelado'>('a_vista');
@@ -458,6 +462,16 @@ function App() {
               >
                 <CreditCard size={14} className="text-purple-600 dark:text-purple-400" />
                 <span className="hidden sm:inline">Cartões</span>
+              </button>
+
+              <button
+                onClick={() => setModalMetasAberto(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-sm transition-all"
+                title="Metas Financeiras"
+                aria-label="Metas"
+              >
+                <PiggyBank size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden sm:inline">Metas</span>
               </button>
 
               <div className="relative flex items-center">
@@ -972,6 +986,14 @@ function App() {
         userId={user.uid}
         cartoes={cartoes}
         parcelamentos={parcelamentos}
+      />
+
+      {/* Modal de Metas Financeiras */}
+      <GoalsModal
+        isOpen={modalMetasAberto}
+        onClose={() => setModalMetasAberto(false)}
+        userId={user.uid}
+        metas={metas}
       />
     </div>
   );
