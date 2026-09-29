@@ -111,9 +111,7 @@ service cloud.firestore {
     // Leitura permitida apenas para o usuário dono.
     // Escrita bloqueada no client — somente o backend (Admin SDK) pode criar/atualizar.
     match /users/{userId}/pluggyItems/{itemId} {
-      allow read: if request.auth != null
-                  && request.auth.uid == userId;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     // Índice interno de ownership de Items Pluggy

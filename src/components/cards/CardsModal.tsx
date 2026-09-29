@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     X,
     Plus,
@@ -23,6 +23,7 @@ import {
 } from '../../finance/financialCore';
 import { centavosParaReais } from '../../utils/money';
 import { toast } from 'react-hot-toast';
+import type { OpenFinanceAccount } from '../../hooks/useOpenFinance';
 
 interface CardsModalProps {
     isOpen: boolean;
@@ -30,7 +31,9 @@ interface CardsModalProps {
     userId: string;
     cartoes: Cartao[];
     parcelamentos: Parcelamento[];
+    contasOpenFinance?: OpenFinanceAccount[];
 }
+
 
 const formatarMoeda = (valor: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -39,16 +42,40 @@ const formatarMoeda = (valor: number) => {
     }).format(valor);
 };
 
+const formatarDataBR = (dataString?: string | null): string | null => {
+    if (!dataString) return null;
+    const apenasData = String(dataString).split('T')[0];
+    const partes = apenasData.split('-');
+    if (partes.length === 3 && partes[0].length === 4) {
+        const [ano, mes, dia] = partes;
+        return `${dia}/${mes}/${ano}`;
+    }
+    return apenasData;
+};
+
+
 export const CardsModal: React.FC<CardsModalProps> = ({
     isOpen,
     onClose,
     userId,
     cartoes,
     parcelamentos,
+    contasOpenFinance = [],
 }) => {
+    // Filtra estritamente apenas contas do tipo 'CREDIT' (Cartão de Crédito), ignorando contas correntes ('BANK')
+    const cartoesOpenFinance = (contasOpenFinance || []).filter(
+        (c) => c.type?.toUpperCase() === 'CREDIT'
+    );
+
     const [cartaoSelecionadoId, setCartaoSelecionadoId] = useState<string>(() => {
-        return cartoes[0]?.id || '';
+        return cartoes[0]?.id || cartoesOpenFinance[0]?.id || '';
     });
+
+    useEffect(() => {
+        if (!cartaoSelecionadoId && (cartoes.length > 0 || cartoesOpenFinance.length > 0)) {
+            setCartaoSelecionadoId(cartoes[0]?.id || cartoesOpenFinance[0]?.id || '');
+        }
+    }, [cartoes, cartoesOpenFinance, cartaoSelecionadoId]);
 
     const [modoNovoCartao, setModoNovoCartao] = useState(false);
     const [nomeCartao, setNomeCartao] = useState('');
@@ -66,13 +93,21 @@ export const CardsModal: React.FC<CardsModalProps> = ({
 
     if (!isOpen) return null;
 
-    // Se nenhum cartão selecionado ou o selecionado foi deletado, foca no primeiro
+    // Cartão manual ou Open Finance selecionado
+    const cartaoManualAtivo = cartoes.find((c) => c.id === cartaoSelecionadoId);
+    const cartaoOFAtivo = !cartaoManualAtivo
+        ? cartoesOpenFinance.find((c) => c.id === cartaoSelecionadoId)
+        : null;
+
     const cartaoAtivo =
-        cartoes.find((c) => c.id === cartaoSelecionadoId) || cartoes[0];
+        cartaoManualAtivo || (!cartaoOFAtivo && cartoes.length > 0 ? cartoes[0] : null);
+    const cartaoOFSelecionado =
+        cartaoOFAtivo || (!cartaoAtivo && cartoesOpenFinance.length > 0 ? cartoesOpenFinance[0] : null);
 
     const comprasDoCartao = cartaoAtivo
         ? parcelamentos.filter((p) => p.cartaoId === cartaoAtivo.id)
         : [];
+
 
     const handleSalvarCartao = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -471,7 +506,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                         </button>
                                     </div>
                                 </form>
-                            ) : cartoes.length === 0 ? (
+                            ) : cartoes.length === 0 && cartoesOpenFinance.length === 0 ? (
                                 <div className="text-center py-6 border border-dashed border-gray-200 dark:border-[#27272a] rounded-xl">
                                     <CreditCard
                                         size={32}
@@ -479,7 +514,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                     />
 
                                     <p className="text-sm font-medium text-gray-600 dark:text-[#a1a1aa]">
-                                        Nenhum cartão cadastrado.
+                                        Nenhum cartão cadastrado ou conectado.
                                     </p>
 
                                     <button
@@ -497,56 +532,183 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                 </div>
                             ) : (
                                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                                    {cartoes.map(
-                                        (cartao) => {
-                                            const isSelected =
-                                                cartaoAtivo?.id ===
-                                                cartao.id;
+                                    {cartoes.map((cartao) => {
+                                        const isSelected =
+                                            cartaoSelecionadoId === cartao.id;
 
-                                            return (
-                                                <button
-                                                    key={
+                                        return (
+                                            <button
+                                                key={cartao.id}
+                                                type="button"
+                                                onClick={() =>
+                                                    setCartaoSelecionadoId(
                                                         cartao.id
-                                                    }
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setCartaoSelecionadoId(
-                                                            cartao.id
-                                                        )
-                                                    }
-                                                    className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all ${isSelected
+                                                    )
+                                                }
+                                                className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all ${
+                                                    isSelected
                                                         ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-500 shadow-sm'
                                                         : 'border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#121214] hover:border-gray-300 dark:hover:border-gray-700'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span className="text-xs font-bold text-gray-900 dark:text-[#f4f4f5] truncate max-w-[120px]">
-                                                            {
-                                                                cartao.nome
-                                                            }
-                                                        </span>
-
-                                                        {!cartao.ativo && (
-                                                            <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full font-medium">
-                                                                Arquivado
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    <span className="text-[11px] text-gray-500 dark:text-[#71717a] block mt-0.5">
-                                                        {
-                                                            cartao.banco
-                                                        }
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs font-bold text-gray-900 dark:text-[#f4f4f5] truncate max-w-[120px]">
+                                                        {cartao.nome}
                                                     </span>
-                                                </button>
-                                            );
-                                        }
-                                    )}
+
+                                                    {!cartao.ativo && (
+                                                        <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full font-medium">
+                                                            Arquivado
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <span className="text-[11px] text-gray-500 dark:text-[#71717a] block mt-0.5">
+                                                    {cartao.banco}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+
+                                    {cartoesOpenFinance.map((cartaoOF) => {
+                                        const isSelected =
+                                            cartaoSelecionadoId === cartaoOF.id;
+                                        const matchingBank = (contasOpenFinance || []).find(
+                                            (acc) => acc.itemId === cartaoOF.itemId && acc.type?.toUpperCase() === 'BANK'
+                                        );
+                                        const bancoNome = matchingBank?.name || cartaoOF.creditData?.brand || 'Cartão Sincronizado';
+
+                                        return (
+                                            <button
+                                                key={cartaoOF.id}
+                                                type="button"
+                                                onClick={() =>
+                                                    setCartaoSelecionadoId(
+                                                        cartaoOF.id
+                                                    )
+                                                }
+                                                className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all ${
+                                                    isSelected
+                                                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 dark:border-indigo-500 shadow-sm'
+                                                        : 'border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#121214] hover:border-gray-300 dark:hover:border-gray-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs font-bold text-gray-900 dark:text-[#f4f4f5] truncate max-w-[120px]">
+                                                        {cartaoOF.name}
+                                                    </span>
+
+                                                    <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-medium">
+                                                        Open Finance
+                                                    </span>
+                                                </div>
+
+                                                <span className="text-[11px] text-gray-500 dark:text-[#71717a] block mt-0.5">
+                                                    {bancoNome}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
 
-                        {/* Detalhes do Cartão Selecionado */}
+                        {/* Detalhes do Cartão Open Finance Selecionado */}
+                        {cartaoOFSelecionado && (
+                            <div className="bg-gray-50 dark:bg-[#121214] border border-gray-200 dark:border-[#27272a] rounded-xl p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 dark:border-[#27272a]">
+                                    <div>
+                                        <h4 className="text-base font-bold text-gray-900 dark:text-[#f4f4f5] flex items-center gap-2">
+                                            {(() => {
+                                                const matchingBank = (contasOpenFinance || []).find(
+                                                    (acc) => acc.itemId === cartaoOFSelecionado.itemId && acc.type?.toUpperCase() === 'BANK'
+                                                );
+                                                return matchingBank?.name && matchingBank.name !== cartaoOFSelecionado.name
+                                                    ? `${matchingBank.name} - ${cartaoOFSelecionado.name}`
+                                                    : cartaoOFSelecionado.name;
+                                            })()}
+                                            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                                                Open Finance
+                                            </span>
+                                        </h4>
+                                        <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mt-1">
+                                            Cartão integrado automaticamente via Open Finance
+                                        </p>
+                                    </div>
+                                    <div className="text-left sm:text-right">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block">Saldo / Fatura Atual</span>
+                                        <span className="text-base font-bold text-gray-900 dark:text-[#f4f4f5]">
+                                            {typeof cartaoOFSelecionado.balance === 'number'
+                                                ? formatarMoeda(cartaoOFSelecionado.balance)
+                                                : 'Não informado pela instituição'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Limite de Crédito Total</span>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {cartaoOFSelecionado.creditData?.creditLimit != null
+                                                ? formatarMoeda(cartaoOFSelecionado.creditData.creditLimit)
+                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Limite Disponível</span>
+                                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                                            {cartaoOFSelecionado.creditData?.availableCreditLimit != null
+                                                ? formatarMoeda(cartaoOFSelecionado.creditData.availableCreditLimit)
+                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Fechamento da Fatura</span>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {formatarDataBR(cartaoOFSelecionado.creditData?.balanceCloseDate) || (
+                                                <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Vencimento da Fatura</span>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {formatarDataBR(cartaoOFSelecionado.creditData?.balanceDueDate) || (
+                                                <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>
+                                            )}
+                                        </p>
+                                    </div>
+
+
+                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Bandeira</span>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {cartaoOFSelecionado.creditData?.brand
+                                                ? cartaoOFSelecionado.creditData.brand
+                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Nível / Status</span>
+                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {cartaoOFSelecionado.creditData?.level || cartaoOFSelecionado.creditData?.status
+                                                ? `${cartaoOFSelecionado.creditData?.level || ''} ${cartaoOFSelecionado.creditData?.status ? `(${cartaoOFSelecionado.creditData.status})` : ''}`.trim()
+                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 p-3 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-lg text-xs text-indigo-700 dark:text-indigo-300">
+                                    Este cartão é gerenciado e sincronizado automaticamente pela sua instituição bancária via Open Finance.
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Detalhes do Cartão Manual Selecionado */}
                         {cartaoAtivo && (
                             <div className="bg-gray-50 dark:bg-[#121214] border border-gray-200 dark:border-[#27272a] rounded-xl p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 dark:border-[#27272a]">

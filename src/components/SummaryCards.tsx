@@ -1,11 +1,7 @@
-import type { Dispatch, SetStateAction } from 'react';
 import type { Transacao } from '../domain/transaction';
-import { TutorialPopover } from './TutorialPopover';
-import { getHighlightClass } from '../utils/getHighlightClass';
 import {
   TrendingUp,
   TrendingDown,
-  Pencil
 } from 'lucide-react';
 import { centavosParaReais } from '../utils/money';
 import {
@@ -14,14 +10,8 @@ import {
 } from '../finance/financialCore';
 
 interface SummaryCardsProps {
-  rendaBase: number;
   transacoes: Transacao[];
   showValues: boolean;
-  onEditIncome: () => void;
-  showTutorial: boolean;
-  tutorialStep: number;
-  setTutorialStep: Dispatch<SetStateAction<number>>;
-  finishTutorial: () => void;
 }
 
 const formatarMoeda = (valorCentavos: number, show: boolean = true) => {
@@ -34,34 +24,22 @@ const formatarMoeda = (valorCentavos: number, show: boolean = true) => {
 };
 
 export function SummaryCards({
-  rendaBase,
   transacoes,
   showValues,
-  onEditIncome,
-  showTutorial,
-  tutorialStep,
-  setTutorialStep,
-  finishTutorial
 }: SummaryCardsProps) {
 
-  const receitasExtras = calcularTotalReceitas(transacoes);
-
-  const totalReceitas = rendaBase + receitasExtras;
+  const totalReceitas = calcularTotalReceitas(transacoes);
 
   const totalDespesas = calcularTotalDespesas(transacoes);
 
   const saldo = totalReceitas - totalDespesas;
 
-  // Cálculo de Comprometimento de Renda
+  // Cálculo de Comprometimento de Receitas por Despesas
   const pctComprometido =
     totalReceitas > 0
       ? (totalDespesas / totalReceitas) * 100
       : 0;
 
-  const pctExtras =
-    rendaBase > 0
-      ? (receitasExtras / rendaBase) * 100
-      : 0;
 
   // Definição de cores dinâmicas
   const getProgressColor = (pct: number) => {
@@ -118,29 +96,6 @@ export function SummaryCards({
                 <span className="text-[11px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400 uppercase">
                   Receitas
                 </span>
-
-                <div className="relative">
-                  <button
-                    onClick={onEditIncome}
-                    className={`p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-md hover:bg-gray-100 dark:hover:bg-[#27272a] transition-colors ${getHighlightClass(
-                      showTutorial && tutorialStep === 3
-                    )}`}
-                    title="Editar renda base"
-                    aria-label="Editar renda base"
-                  >
-                    <Pencil size={13} />
-                  </button>
-
-                  <TutorialPopover
-                    showTutorial={showTutorial}
-                    tutorialStep={tutorialStep}
-                    stepIndex={3}
-                    text="Clique no lápis para definir ou alterar sua renda mensal."
-                    setTutorialStep={setTutorialStep}
-                    finishTutorial={finishTutorial}
-                    arrowPosition="bottom-right"
-                  />
-                </div>
               </div>
 
               <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 truncate">
@@ -192,21 +147,24 @@ export function SummaryCards({
             </h2>
           </div>
 
-          {/* Barra de Progresso de Entradas Extras */}
+          {/* Barra de Saldo Líquido do Mês */}
           <div className="my-4 space-y-1.5">
             <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
-              <span>Receita extra</span>
+              <span>Saldo líquido</span>
 
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                +{pctExtras.toFixed(0)}%
+              <span className={`font-semibold ${saldo >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {saldo > 0 ? '+' : ''}{formatarMoeda(saldo, showValues)}
               </span>
             </div>
 
             <div className="w-full bg-gray-100 dark:bg-[#27272a] h-2 rounded-full overflow-hidden">
               <div
-                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                className={`h-full rounded-full transition-all duration-500 ${saldo >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}
                 style={{
-                  width: `${Math.min(pctExtras, 100)}%`
+                  width: `${Math.min(
+                    totalReceitas > 0 ? Math.max((Math.abs(saldo) / totalReceitas) * 100, 6) : 0,
+                    100
+                  )}%`
                 }}
               />
             </div>
@@ -215,32 +173,11 @@ export function SummaryCards({
           {/* Rodapé */}
           <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
             <span className="truncate">
-              Alterar Renda Base
+              Entradas registradas no mês
             </span>
-
-            <div className="relative flex items-center">
-              <button
-                onClick={onEditIncome}
-                className={`p-1.5 hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors ${getHighlightClass(
-                  showTutorial && tutorialStep === 3
-                )}`}
-                title="Editar renda base"
-              >
-                <Pencil size={14} />
-              </button>
-
-              <TutorialPopover
-                showTutorial={showTutorial}
-                tutorialStep={tutorialStep}
-                stepIndex={3}
-                text="Clique no lápis para definir ou alterar sua renda mensal."
-                setTutorialStep={setTutorialStep}
-                finishTutorial={finishTutorial}
-                arrowPosition="bottom-right"
-              />
-            </div>
           </div>
         </div>
+
 
         {/* Card Despesas */}
         <div className="relative bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-sm transition-colors duration-300 flex flex-col justify-between">
@@ -264,10 +201,10 @@ export function SummaryCards({
             </h2>
           </div>
 
-          {/* Barra de Progresso do Comprometimento da Renda */}
+          {/* Barra de Progresso do Comprometimento da Receita */}
           <div className="my-4 space-y-1.5">
             <div className="flex justify-between text-xs text-gray-500 dark:text-[#a1a1aa]">
-              <span>Comprometimento da renda</span>
+              <span>Comprometimento da receita</span>
 
               <span
                 className={`font-semibold ${getTextColor(

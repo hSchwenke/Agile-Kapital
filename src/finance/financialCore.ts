@@ -1,10 +1,34 @@
 import type { Transacao } from '../domain/transaction';
 
+/**
+ * Determina se uma transação afeta as receitas do período.
+ * Prioriza a flag econômica 'affectsIncome' da camada financeira.
+ * Para transações legadas ou manuais sem a flag, mantém fallback para tipo === 'receita'.
+ */
+export function transacaoAfetaReceita(transacao: Transacao): boolean {
+    if (typeof transacao.affectsIncome === 'boolean') {
+        return transacao.affectsIncome;
+    }
+    return transacao.tipo === 'receita';
+}
+
+/**
+ * Determina se uma transação afeta as despesas do período.
+ * Prioriza a flag econômica 'affectsExpense' da camada financeira.
+ * Para transações legadas ou manuais sem a flag, mantém fallback para tipo === 'despesa'.
+ */
+export function transacaoAfetaDespesa(transacao: Transacao): boolean {
+    if (typeof transacao.affectsExpense === 'boolean') {
+        return transacao.affectsExpense;
+    }
+    return transacao.tipo === 'despesa';
+}
+
 export function calcularTotalReceitas(
     transacoes: Transacao[]
 ): number {
     return transacoes
-        .filter((transacao) => transacao.tipo === 'receita')
+        .filter(transacaoAfetaReceita)
         .reduce((total, transacao) => total + transacao.valorCentavos, 0);
 }
 
@@ -12,7 +36,7 @@ export function calcularTotalDespesas(
     transacoes: Transacao[]
 ): number {
     return transacoes
-        .filter((transacao) => transacao.tipo === 'despesa')
+        .filter(transacaoAfetaDespesa)
         .reduce((total, transacao) => total + transacao.valorCentavos, 0);
 }
 
@@ -30,7 +54,7 @@ export function calcularDespesasPorCategoria(
     transacoes: Transacao[]
 ): Record<string, number> {
     return transacoes
-        .filter((transacao) => transacao.tipo === 'despesa')
+        .filter(transacaoAfetaDespesa)
         .reduce<Record<string, number>>((acc, transacao) => {
             const categoria = transacao.categoria || 'outros';
 

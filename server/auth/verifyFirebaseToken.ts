@@ -37,9 +37,15 @@ export async function verifyFirebaseToken(headers: IncomingHttpHeaders): Promise
     }
 
     return decodedToken.uid;
-  } catch {
-    // Nunca registra o token em logs para não vazar credenciais
-    console.error('Falha na validação do token Firebase ID Token.');
-    throw new AuthError('Token de autenticação expirado ou inválido.', 401);
+  } catch (error) {
+    console.error(
+      'Falha na validação do Firebase ID Token:',
+      error instanceof Error ? error.message : error
+    );
+
+    throw new AuthError(
+      'Token de autenticação expirado ou inválido.',
+      401
+    );
   }
 }

@@ -14,6 +14,7 @@ import { centavosParaReais } from '../../utils/money';
 import {
   calcularTotalDespesas,
   calcularDespesasPorCategoria,
+  transacaoAfetaDespesa,
 } from '../../finance/financialCore';
 
 const CORES_GRAFICO = [
@@ -38,9 +39,7 @@ export const PeriodInsightCard: React.FC<Props> = ({
   transacoes,
   showValues,
 }) => {
-  const despesas = transacoes.filter(
-    (t) => t.tipo === 'despesa'
-  );
+  const despesas = transacoes.filter(transacaoAfetaDespesa);
 
   const totalDespesas =
     calcularTotalDespesas(transacoes);

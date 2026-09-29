@@ -8,6 +8,8 @@ import {
     query,
     updateDoc,
     where,
+    type DocumentData,
+    type UpdateData
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Meta } from '../domain/goal';
@@ -94,7 +96,7 @@ export async function atualizarMeta(
         Pick<Meta, 'nome' | 'valorAlvoCentavos' | 'dataLimite'>
     >
 ): Promise<void> {
-    const payload: Record<string, unknown> = {};
+    const payload: UpdateData<DocumentData> = {};
 
     if (dados.nome !== undefined) {
         if (!dados.nome.trim()) {
@@ -144,7 +146,7 @@ export async function atualizarProgressoMeta(
         );
     }
 
-    const payload: Record<string, unknown> = {
+    const payload: UpdateData<DocumentData> = {
         valorAtualCentavos: novoValorAtualCentavos,
     };
 

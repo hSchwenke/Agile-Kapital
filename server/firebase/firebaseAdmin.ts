@@ -1,3 +1,7 @@
+import * as dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
+
 import { getApps, initializeApp, cert, type App } from 'firebase-admin/app';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getFirestore, type Firestore, FieldValue } from 'firebase-admin/firestore';
@@ -12,24 +16,25 @@ function getFirebaseAdminApp(): App {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
-    // Normaliza quebras de linha em variáveis de ambiente de linha única
-    privateKey = privateKey.replace(/\\n/g, '\n');
+    privateKey = privateKey.replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
   }
 
-  if (projectId && clientEmail && privateKey) {
-    return initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
-    });
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error(
+      `Firebase Admin env incompleto: projectId=${Boolean(projectId)}, clientEmail=${Boolean(clientEmail)}, privateKey=${Boolean(privateKey)}`
+    );
   }
 
-  // Fallback para Application Default Credentials (ADC) em ambientes Google Cloud / Vercel
-  return initializeApp();
+  return initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
+  });
 }
 
 export const adminAuth: Auth = getAuth(getFirebaseAdminApp());
 export const adminDb: Firestore = getFirestore(getFirebaseAdminApp());
+
 export { FieldValue };

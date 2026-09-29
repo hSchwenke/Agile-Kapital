@@ -1,16 +1,14 @@
-import { useState, useEffect, type SyntheticEvent } from 'react';
+import { useState, useEffect, useMemo, type SyntheticEvent } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { SummaryCards } from './components/SummaryCards';
 import { PeriodInsightCard } from './components/analytics/PeriodInsightCard';
 import { CATEGORIAS, LISTA_CATEGORIAS, type CategoriaId } from './utils/categorias';
-import { CreditCard, LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle, PiggyBank } from 'lucide-react';
+import { CreditCard, LogOut, Eye, EyeOff, ChevronLeft, ChevronRight, Plus, X, HelpCircle, PiggyBank, Landmark } from 'lucide-react';
 import { TutorialPopover } from './components/TutorialPopover';
 import { getHighlightClass } from './utils/getHighlightClass';
 import './App.css';
 import { criarTransacao, deletarTransacao } from './services/transactionService';
-import { salvarRenda } from './services/incomeService';
 import { criarParcelamento } from './services/installmentService';
-import { useIncome } from './hooks/useIncome';
 import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
 import { useCards } from './hooks/useCards';
@@ -25,7 +23,8 @@ import {
   calcularProximaCompetencia,
 } from './finance/financialCore';
 import { getDataLocalHoje, getCompetenciaLocalHoje } from './utils/date';
-
+import { useOpenFinance } from './hooks/useOpenFinance';
+import { OpenFinanceManager } from './components/openFinance/OpenFinanceManager';
 
 const formatarMoeda = (valor: number, show: boolean = true) => {
   if (!show) return 'R$ •••••';
@@ -63,20 +62,51 @@ function App() {
 
   const [mesCompetencia, setMesCompetencia] = useState(() => getCompetenciaLocalHoje());
 
-  const { transacoes } = useTransactions(
+  const { transacoes: transacoesManuais } = useTransactions(
     user?.uid,
     mesCompetencia
   );
 
-  const { rendaFixa } = useIncome(user?.uid);
-  const [rendaInput, setRendaInput] = useState('');
+  const {
+    contas: contasOpenFinance,
+    transacoesOpenFinance,
+    carregando: carregandoOpenFinance,
+    erro: erroOpenFinance,
+    recarregar: recarregarOpenFinance,
+    desconectar: desconectarOpenFinance,
+  } = useOpenFinance(user?.uid);
+
+  const [modalOpenFinanceAberto, setModalOpenFinanceAberto] = useState(false);
+
+  const transacoes = useMemo(() => {
+    const ofDoMes = transacoesOpenFinance.filter(
+      (t) => t.competencia === mesCompetencia
+    );
+
+    const mapa = new Map<string, typeof transacoesManuais[0]>();
+
+    for (const t of transacoesManuais) {
+      mapa.set(t.id, t);
+    }
+
+    for (const t of ofDoMes) {
+      if (!mapa.has(t.id)) {
+        mapa.set(t.id, t);
+      }
+    }
+
+    return Array.from(mapa.values()).sort((a, b) => {
+      const dataA = a.data ? new Date(a.data).getTime() : 0;
+      const dataB = b.data ? new Date(b.data).getTime() : 0;
+      return dataB - dataA;
+    });
+  }, [transacoesManuais, transacoesOpenFinance, mesCompetencia]);
 
   const { cartoes, cartoesAtivos } = useCards(user?.uid);
   const { parcelamentos } = useInstallments(user?.uid);
   const { metas } = useGoals(user?.uid);
 
   const [showValues, setShowValues] = useState(true);
-  const [modalRendaAberto, setModalRendaAberto] = useState(false);
   const [modalTransacaoAberto, setModalTransacaoAberto] = useState(false);
   const [modalCartoesAberto, setModalCartoesAberto] = useState(false);
   const [modalMetasAberto, setModalMetasAberto] = useState(false);
@@ -117,15 +147,6 @@ function App() {
     const novoAno = data.getFullYear();
     const novoMes = String(data.getMonth() + 1).padStart(2, '0');
     setMesCompetencia(`${novoAno}-${novoMes}`);
-  };
-
-  const handleEditIncome = () => {
-    if (rendaFixa > 0) {
-      setRendaInput(centavosParaReais(rendaFixa).toString());
-    } else {
-      setRendaInput('');
-    }
-    setModalRendaAberto(true);
   };
 
   const abrirModalNovaTransacao = () => {
@@ -204,36 +225,6 @@ function App() {
     setTema(temaAtual => (temaAtual === 'dark' ? 'light' : 'dark'));
   };
 
-  const salvarRendaFixa = async (evento: SyntheticEvent) => {
-    evento.preventDefault();
-
-    if (!user) return toast.error('Você precisa estar logado para salvar!');
-    if (!rendaInput || rendaInput.trim() === '') return toast.error('Digite um valor para a receita!');
-
-    const valorNumerico = Number(rendaInput);
-    if (isNaN(valorNumerico) || !Number.isFinite(valorNumerico) || valorNumerico <= 0) {
-      return toast.error('Digite um valor válido maior que zero!');
-    }
-
-    const valorCentavos = reaisParaCentavos(valorNumerico);
-    if (!Number.isInteger(valorCentavos) || valorCentavos <= 0) {
-      return toast.error('Valor inválido!');
-    }
-
-    try {
-      await salvarRenda(
-        user.uid,
-        valorCentavos
-      );
-
-      setRendaInput('');
-      setModalRendaAberto(false);
-      toast.success('Receita atualizada!');
-    } catch (error) {
-      console.error('Erro ao salvar renda: ', error);
-      toast.error('Erro ao salvar receita.');
-    }
-  };
 
   const salvarTransacao = async (evento: SyntheticEvent) => {
     evento.preventDefault();
@@ -403,6 +394,7 @@ function App() {
 
           <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-2 sm:mt-0">
             <div className="flex items-center gap-2">
+
               <button
                 onClick={resetTutorial}
                 className="p-2 rounded-md bg-white border border-gray-200 hover:bg-gray-100 text-indigo-600 dark:border-transparent dark:bg-[#18181b] dark:hover:bg-[#27272a] dark:text-[#8b5cf6] transition-colors shadow-sm dark:shadow-none"
@@ -454,9 +446,23 @@ function App() {
             </div>
 
             <div className="flex items-center gap-2">
+
+              <button
+                onClick={() => setModalOpenFinanceAberto(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md active:scale-95 shadow-md shadow-indigo-500/20 transition-all relative"
+                title="Gerenciar Open Finance"
+                aria-label="Open Finance"
+              >
+                <Landmark size={14} />
+                <span>Open Finance</span>
+                {contasOpenFinance.length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 absolute -top-0.5 -right-0.5" />
+                )}
+              </button>
+
               <button
                 onClick={() => setModalCartoesAberto(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-sm transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-xs transition-all"
                 title="Cartões de Crédito"
                 aria-label="Cartões"
               >
@@ -466,7 +472,7 @@ function App() {
 
               <button
                 onClick={() => setModalMetasAberto(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-sm transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-xs transition-all"
                 title="Metas Financeiras"
                 aria-label="Metas"
               >
@@ -477,17 +483,18 @@ function App() {
               <div className="relative flex items-center">
                 <button
                   onClick={abrirModalNovaTransacao}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-md active:scale-95 shadow-lg shadow-purple-500/25 ${getHighlightClass(showTutorial && tutorialStep === 4)}`}
-                  title="Nova Transação"
-                  aria-label="Nova Transação"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-md active:scale-95 shadow-xs transition-all ${getHighlightClass(showTutorial && tutorialStep === 4)}`}
+                  title="Adicionar lançamento manual"
+                  aria-label="Adicionar lançamento manual"
                 >
-                  <Plus size={14} />
-                  <span className="hidden sm:inline">Nova Transação</span>
+                  <Plus size={14} className="text-gray-500 dark:text-gray-400" />
+                  <span className="hidden sm:inline">Adicionar lançamento manual</span>
+                  <span className="sm:hidden">Manual</span>
                 </button>
                 <TutorialPopover
                   showTutorial={showTutorial} tutorialStep={tutorialStep}
                   setTutorialStep={setTutorialStep} finishTutorial={finishTutorial}
-                  stepIndex={4} text="Para registrar entradas ou saídas, basta selecionar 'Nova Transação'."
+                  stepIndex={4} text="Para registrar entradas ou saídas manuais, basta selecionar 'Adicionar lançamento manual'."
                   arrowPosition="top"
                 />
               </div>
@@ -499,14 +506,8 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
           <div className="lg:col-span-2">
             <SummaryCards
-              rendaBase={rendaFixa}
               transacoes={transacoes}
               showValues={showValues}
-              onEditIncome={handleEditIncome}
-              showTutorial={showTutorial}
-              tutorialStep={tutorialStep}
-              setTutorialStep={setTutorialStep}
-              finishTutorial={finishTutorial}
             />
           </div>
 
@@ -585,17 +586,26 @@ function App() {
                       const CategoriaIcon = categoriaDef.Icon;
 
                       return (
-                        <li key={t.id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors group">
+                        <li key={t.id} className="flex items-center justify-between p-3 bg-white dark:bg-[#18181b] hover:bg-gray-50 dark:hover:bg-[#27272a]/50 transition-colors group">
                           <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                            <button
-                              onClick={() => setTransacaoParaDeletar(t.id)}
-                              className="opacity-40 group-hover:opacity-100 text-gray-400 hover:text-rose-500 transition-all shrink-0"
-                              title="Remover transação"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </button>
+                            {t.isOpenFinance ? (
+                              <div
+                                className="w-4 h-4 shrink-0 flex items-center justify-center text-indigo-500 dark:text-indigo-400 opacity-60 group-hover:opacity-100"
+                                title="Transação sincronizada via Open Finance"
+                              >
+                                <Landmark size={14} />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setTransacaoParaDeletar(t.id)}
+                                className="w-4 h-4 shrink-0 flex items-center justify-center opacity-40 group-hover:opacity-100 text-gray-400 hover:text-rose-500 transition-all"
+                                title="Remover transação"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </button>
+                            )}
 
                             <div className="flex flex-col min-w-0 flex-1">
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 truncate">
@@ -610,14 +620,41 @@ function App() {
                                   <CategoriaIcon className="w-3 h-3" />
                                   {categoriaDef.label}
                                 </span>
+                                {t.isOpenFinance && (
+                                  <span className="whitespace-nowrap inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-md shrink-0 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/40 w-max">
+                                    <Landmark size={9} />
+                                    Open Finance
+                                  </span>
+                                )}
+                                {t.financialType === 'INTERNAL_TRANSFER' && (
+                                  <span className="whitespace-nowrap inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-md shrink-0 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/40 w-max" title="Transferência entre contas próprias (não altera receita nem despesa)">
+                                    Transf. Interna
+                                  </span>
+                                )}
+                                {t.financialType === 'CREDIT_CARD_PAYMENT' && (
+                                  <span className="whitespace-nowrap inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-md shrink-0 text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/80 dark:border-cyan-800/40 w-max" title="Pagamento de fatura (despesas já contabilizadas nas compras do cartão)">
+                                    Pgto. Fatura
+                                  </span>
+                                )}
                               </div>
                               {t.data && <span className="text-xs text-gray-400 dark:text-[#71717a] mt-0.5">{formatarData(t.data)}</span>}
                             </div>
                           </div>
 
-                          <div className={`text-right shrink-0 font-semibold text-sm ${t.tipo === 'receita' ? 'text-emerald-600 dark:text-[#10b981]' : 'text-rose-600 dark:text-[#f43f5e]'}`}>
-                            {t.tipo === 'receita' ? '+' : '-'} {showValues ? formatarMoeda(centavosParaReais(t.valorCentavos)) : 'R$ •••••'}
-                          </div>
+                          {(() => {
+                            const isNeutral = t.affectsIncome === false && t.affectsExpense === false;
+                            const colorClass = isNeutral
+                              ? 'text-gray-500 dark:text-[#a1a1aa]'
+                              : t.tipo === 'receita'
+                              ? 'text-emerald-600 dark:text-[#10b981]'
+                              : 'text-rose-600 dark:text-[#f43f5e]';
+
+                            return (
+                              <div className={`text-right shrink-0 font-semibold text-sm ${colorClass}`}>
+                                {t.tipo === 'receita' ? '+' : '-'} {showValues ? formatarMoeda(centavosParaReais(t.valorCentavos)) : 'R$ •••••'}
+                              </div>
+                            );
+                          })()}
                         </li>
                       );
                     })}
@@ -627,220 +664,245 @@ function App() {
           </div>
         </div>
 
-      </div>
+      </div >
 
       {/* Modal de Confirmação de Deleção */}
-      {transacaoParaDeletar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5] mb-2">Excluir Transação</h3>
-            <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mb-6">
-              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setTransacaoParaDeletar(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarDelecao}
-                className="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600 rounded-lg transition-colors shadow-sm"
-              >
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Edição da Renda Base */}
-      {modalRendaAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Editar Renda Base</h3>
-              <button onClick={() => setModalRendaAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={salvarRendaFixa} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa] mb-1">Valor da Receita Mensal</label>
-                <input
-                  type="number"
-                  placeholder="Ex: 3500.00"
-                  value={rendaInput}
-                  onChange={(e) => setRendaInput(e.target.value)}
-                  step="0.01"
-                  className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-indigo-500 dark:focus:border-[#8b5cf6] transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  autoFocus
-                />
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
+      {
+        transacaoParaDeletar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5] mb-2">Excluir Transação</h3>
+              <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mb-6">
+                Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex justify-end gap-3">
                 <button
-                  type="button"
-                  onClick={() => setModalRendaAberto(false)}
+                  onClick={() => setTransacaoParaDeletar(null)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-[#8b5cf6] dark:hover:bg-[#7c3aed] rounded-lg transition-colors shadow-sm"
+                  onClick={confirmarDelecao}
+                  className="px-4 py-2 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600 rounded-lg transition-colors shadow-sm"
                 >
-                  Salvar
+                  Excluir
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
+
 
       {/* Modal de Nova Transação */}
-      {modalTransacaoAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-md w-full transform transition-all">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Nova Transação</h3>
-              <button onClick={() => setModalTransacaoAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
+      {
+        modalTransacaoAberto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-md w-full transform transition-all">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Nova Transação</h3>
+                <button onClick={() => setModalTransacaoAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
 
-            {/* Alternador de Modo: À Vista vs Parcelado no Cartão */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-[#121214] rounded-lg mb-4 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => {
-                  setModoTransacao('a_vista');
-                  setTipo('despesa');
-                }}
-                className={`py-1.5 rounded-md transition-all ${modoTransacao === 'a_vista'
-                  ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-              >
-                À Vista
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModoTransacao('parcelado');
-                  setTipo('despesa');
-                  if (!cartaoSelecionadoId && cartoesAtivos[0]) {
-                    setCartaoSelecionadoId(cartoesAtivos[0].id);
-                  }
-                }}
-                className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${modoTransacao === 'parcelado'
-                  ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-              >
-                <CreditCard size={13} />
-                Parcelado no Cartão
-              </button>
-            </div>
+              {/* Alternador de Modo: À Vista vs Parcelado no Cartão */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-[#121214] rounded-lg mb-4 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModoTransacao('a_vista');
+                    setTipo('despesa');
+                  }}
+                  className={`py-1.5 rounded-md transition-all ${modoTransacao === 'a_vista'
+                    ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                >
+                  À Vista
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModoTransacao('parcelado');
+                    setTipo('despesa');
+                    if (!cartaoSelecionadoId && cartoesAtivos[0]) {
+                      setCartaoSelecionadoId(cartoesAtivos[0].id);
+                    }
+                  }}
+                  className={`py-1.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${modoTransacao === 'parcelado'
+                    ? 'bg-white dark:bg-[#27272a] text-purple-600 dark:text-purple-400 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                >
+                  <CreditCard size={13} />
+                  Parcelado no Cartão
+                </button>
+              </div>
 
-            <form onSubmit={salvarTransacao} className="space-y-4">
-              {modoTransacao === 'parcelado' && (
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Cartão de Crédito</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModalTransacaoAberto(false);
-                        setModalCartoesAberto(true);
-                      }}
-                      className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
-                    >
-                      + Gerenciar Cartões
-                    </button>
-                  </div>
-                  {cartoesAtivos.length === 0 ? (
-                    <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex justify-between items-center">
-                      <span>Nenhum cartão ativo cadastrado.</span>
+              <form onSubmit={salvarTransacao} className="space-y-4">
+                {modoTransacao === 'parcelado' && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Cartão de Crédito</label>
                       <button
                         type="button"
                         onClick={() => {
                           setModalTransacaoAberto(false);
                           setModalCartoesAberto(true);
                         }}
-                        className="font-semibold underline"
+                        className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
                       >
-                        Cadastrar cartão
+                        + Gerenciar Cartões
                       </button>
                     </div>
-                  ) : (
-                    <select
-                      value={cartaoSelecionadoId}
-                      onChange={(e) => {
-                        setCartaoSelecionadoId(e.target.value);
-                        setCompetenciaEditadaManualmente(false);
-                      }}
-                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
-                      required
-                    >
-                      {cartoesAtivos.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome} ({c.banco}) - Fecha dia {c.diaFechamento}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Descrição</label>
-                <input
-                  type="text"
-                  placeholder={modoTransacao === 'parcelado' ? 'Ex: Notebook Dell' : 'Ex: Conta de Luz'}
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors"
-                  autoFocus
-                />
-              </div>
-
-              {modoTransacao === 'parcelado' ? (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Data da Compra</label>
-                      <input
-                        type="date"
-                        value={dataCompraInput}
+                    {cartoesAtivos.length === 0 ? (
+                      <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-lg text-xs text-amber-800 dark:text-amber-300 flex justify-between items-center">
+                        <span>Nenhum cartão ativo cadastrado.</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModalTransacaoAberto(false);
+                            setModalCartoesAberto(true);
+                          }}
+                          className="font-semibold underline"
+                        >
+                          Cadastrar cartão
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={cartaoSelecionadoId}
                         onChange={(e) => {
-                          setDataCompraInput(e.target.value);
+                          setCartaoSelecionadoId(e.target.value);
                           setCompetenciaEditadaManualmente(false);
                         }}
                         className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
                         required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Parcelas (2 a 72x)</label>
-                      <select
-                        value={totalParcelasInput}
-                        onChange={(e) => setTotalParcelasInput(Number(e.target.value))}
-                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
                       >
-                        {Array.from({ length: 71 }, (_, i) => i + 2).map((num) => (
-                          <option key={num} value={num}>
-                            {num}x parcelas
+                        {cartoesAtivos.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nome} ({c.banco}) - Fecha dia {c.diaFechamento}
                           </option>
                         ))}
                       </select>
-                    </div>
+                    )}
                   </div>
+                )}
 
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Descrição</label>
+                  <input
+                    type="text"
+                    placeholder={modoTransacao === 'parcelado' ? 'Ex: Notebook Dell' : 'Ex: Conta de Luz'}
+                    value={descricao}
+                    onChange={(e) => setDescricao(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors"
+                    autoFocus
+                  />
+                </div>
+
+                {modoTransacao === 'parcelado' ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Data da Compra</label>
+                        <input
+                          type="date"
+                          value={dataCompraInput}
+                          onChange={(e) => {
+                            setDataCompraInput(e.target.value);
+                            setCompetenciaEditadaManualmente(false);
+                          }}
+                          className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Parcelas (2 a 72x)</label>
+                        <select
+                          value={totalParcelasInput}
+                          onChange={(e) => setTotalParcelasInput(Number(e.target.value))}
+                          className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                        >
+                          {Array.from({ length: 71 }, (_, i) => i + 2).map((num) => (
+                            <option key={num} value={num}>
+                              {num}x parcelas
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor Total (R$)</label>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={valor}
+                          onChange={(e) => setValor(e.target.value)}
+                          step="0.01"
+                          className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Início</label>
+                          <span className="text-[10px] text-gray-400">
+                            {competenciaEditadaManualmente ? 'Manual' : 'Automático'}
+                          </span>
+                        </div>
+                        <input
+                          type="month"
+                          value={competenciaInicialInput}
+                          onChange={(e) => {
+                            setCompetenciaInicialInput(e.target.value);
+                            setCompetenciaEditadaManualmente(true);
+                          }}
+                          className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Preview das Parcelas usando dividirParcelas */}
+                    {Number(valor) > 0 && totalParcelasInput >= 2 && totalParcelasInput <= 72 && (
+                      (() => {
+                        const centavos = reaisParaCentavos(Number(valor));
+                        if (!Number.isInteger(centavos) || centavos <= 0) return null;
+                        const parcelas = dividirParcelas(centavos, totalParcelasInput);
+                        return (
+                          <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-lg text-xs space-y-1.5">
+                            <div className="font-semibold text-purple-900 dark:text-purple-300 flex justify-between">
+                              <span>Preview das Parcelas (Soma: {formatarMoeda(centavosParaReais(centavos))})</span>
+                              <span>{totalParcelasInput}x</span>
+                            </div>
+                            <div className="max-h-24 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                              {parcelas.map((pCentavos, idx) => {
+                                const comp = calcularProximaCompetencia(competenciaInicialInput || getCompetenciaLocalHoje(), idx);
+                                return (
+                                  <div key={idx} className="flex justify-between text-gray-600 dark:text-[#a1a1aa] text-[11px]">
+                                    <span>Parcela {idx + 1}/{totalParcelasInput} ({comp})</span>
+                                    <span className="font-medium text-gray-900 dark:text-[#f4f4f5]">
+                                      {formatarMoeda(centavosParaReais(pCentavos))}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    )}
+                  </>
+                ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor Total (R$)</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor (R$)</label>
                       <input
                         type="number"
                         placeholder="0.00"
@@ -852,132 +914,69 @@ function App() {
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex justify-between items-center">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Início</label>
-                        <span className="text-[10px] text-gray-400">
-                          {competenciaEditadaManualmente ? 'Manual' : 'Automático'}
-                        </span>
-                      </div>
-                      <input
-                        type="month"
-                        value={competenciaInicialInput}
-                        onChange={(e) => {
-                          setCompetenciaInicialInput(e.target.value);
-                          setCompetenciaEditadaManualmente(true);
-                        }}
-                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 transition-colors"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Preview das Parcelas usando dividirParcelas */}
-                  {Number(valor) > 0 && totalParcelasInput >= 2 && totalParcelasInput <= 72 && (
-                    (() => {
-                      const centavos = reaisParaCentavos(Number(valor));
-                      if (!Number.isInteger(centavos) || centavos <= 0) return null;
-                      const parcelas = dividirParcelas(centavos, totalParcelasInput);
-                      return (
-                        <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 rounded-lg text-xs space-y-1.5">
-                          <div className="font-semibold text-purple-900 dark:text-purple-300 flex justify-between">
-                            <span>Preview das Parcelas (Soma: {formatarMoeda(centavosParaReais(centavos))})</span>
-                            <span>{totalParcelasInput}x</span>
-                          </div>
-                          <div className="max-h-24 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
-                            {parcelas.map((pCentavos, idx) => {
-                              const comp = calcularProximaCompetencia(competenciaInicialInput || getCompetenciaLocalHoje(), idx);
-                              return (
-                                <div key={idx} className="flex justify-between text-gray-600 dark:text-[#a1a1aa] text-[11px]">
-                                  <span>Parcela {idx + 1}/{totalParcelasInput} ({comp})</span>
-                                  <span className="font-medium text-gray-900 dark:text-[#f4f4f5]">
-                                    {formatarMoeda(centavosParaReais(pCentavos))}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Tipo</label>
+                      <div className="relative">
+                        <select
+                          value={tipo}
+                          onChange={(e) => setTipo(e.target.value as 'receita' | 'despesa')}
+                          className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors appearance-none cursor-pointer pr-8"
+                        >
+                          <option value="despesa">Despesa</option>
+                          <option value="receita">Receita</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
                         </div>
-                      );
-                    })()
-                  )}
-                </>
-              ) : (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Valor (R$)</label>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      value={valor}
-                      onChange={(e) => setValor(e.target.value)}
-                      step="0.01"
-                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] placeholder-gray-400 dark:placeholder-[#71717a] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Tipo</label>
-                    <div className="relative">
-                      <select
-                        value={tipo}
-                        onChange={(e) => setTipo(e.target.value as 'receita' | 'despesa')}
-                        className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors appearance-none cursor-pointer pr-8"
-                      >
-                        <option value="despesa">Despesa</option>
-                        <option value="receita">Receita</option>
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Categoria</label>
-                <div className="relative">
-                  <select
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value as CategoriaId)}
-                    className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors appearance-none cursor-pointer pr-8"
-                  >
-                    {LISTA_CATEGORIAS.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#a1a1aa]">Categoria</label>
+                  <div className="relative">
+                    <select
+                      value={categoria}
+                      onChange={(e) => setCategoria(e.target.value as CategoriaId)}
+                      className="w-full bg-gray-50 dark:bg-[#09090b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-[#f4f4f5] focus:outline-none focus:border-purple-500 dark:focus:border-purple-500 transition-colors appearance-none cursor-pointer pr-8"
+                    >
+                      {LISTA_CATEGORIAS.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-500 dark:text-[#71717a]">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setModalTransacaoAberto(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={modoTransacao === 'parcelado' && cartoesAtivos.length === 0}
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                >
-                  {modoTransacao === 'parcelado' ? 'Registrar Parcelamento' : 'Adicionar'}
-                </button>
-              </div>
-            </form>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setModalTransacaoAberto(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#a1a1aa] hover:bg-gray-100 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={modoTransacao === 'parcelado' && cartoesAtivos.length === 0}
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                  >
+                    {modoTransacao === 'parcelado' ? 'Registrar Parcelamento' : 'Adicionar'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de Cartões de Crédito */}
       <CardsModal
@@ -986,6 +985,7 @@ function App() {
         userId={user.uid}
         cartoes={cartoes}
         parcelamentos={parcelamentos}
+        contasOpenFinance={contasOpenFinance}
       />
 
       {/* Modal de Metas Financeiras */}
@@ -995,7 +995,18 @@ function App() {
         userId={user.uid}
         metas={metas}
       />
-    </div>
+
+      {/* Modal de Gerenciamento Open Finance */}
+      <OpenFinanceManager
+        isOpen={modalOpenFinanceAberto}
+        onClose={() => setModalOpenFinanceAberto(false)}
+        contas={contasOpenFinance}
+        carregando={carregandoOpenFinance}
+        erro={erroOpenFinance}
+        onRecarregar={recarregarOpenFinance}
+        onDesconectar={desconectarOpenFinance}
+      />
+    </div >
   );
 }
 

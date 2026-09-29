@@ -8,6 +8,8 @@ import {
     query,
     updateDoc,
     where,
+    type DocumentData,
+    type UpdateData
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Cartao } from '../domain/card';
@@ -87,7 +89,7 @@ export async function atualizarCartao(
         }
     }
 
-    const payload: Record<string, unknown> = {};
+    const payload: UpdateData<DocumentData> = {};
     if (dados.nome !== undefined) payload.nome = dados.nome.trim();
     if (dados.banco !== undefined) payload.banco = dados.banco.trim();
     if (dados.diaFechamento !== undefined) payload.diaFechamento = dados.diaFechamento;
