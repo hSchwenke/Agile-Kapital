@@ -1,4 +1,4 @@
-import { getPluggyApiKey } from './authenticatePluggy';
+import { getPluggyApiKey } from './authenticatePluggy.js';
 
 interface PluggyRawCreditData {
   creditLimit?: number | null;

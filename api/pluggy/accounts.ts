@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyFirebaseToken, AuthError } from '../../server/auth/verifyFirebaseToken';
-import { getUserAccounts } from '../../server/pluggy/accountsService';
+import { verifyFirebaseToken, AuthError } from '../../server/auth/verifyFirebaseToken.js';
+import { getUserAccounts } from '../../server/pluggy/accountsService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json');

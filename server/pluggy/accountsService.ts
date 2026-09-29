@@ -1,8 +1,8 @@
-import { adminDb } from '../firebase/firebaseAdmin';
+import { adminDb } from '../firebase/firebaseAdmin.js';
 import {
   getPluggyAccounts,
   type PluggyAccount,
-} from './getPluggyAccounts';
+} from './getPluggyAccounts.js';
 
 export async function getUserAccounts(
   uid: string

@@ -1,8 +1,8 @@
-import { getUserAccounts } from './accountsService';
+import { getUserAccounts } from './accountsService.js';
 import {
     getPluggyTransactions,
     type PluggyTransaction,
-} from './getPluggyTransactions';
+} from './getPluggyTransactions.js';
 
 export async function getUserTransactions(
     uid: string

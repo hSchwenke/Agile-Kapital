@@ -1,5 +1,5 @@
-import { adminDb, FieldValue } from '../firebase/firebaseAdmin';
-import { getPluggyItem } from './getPluggyItem';
+import { adminDb, FieldValue } from '../firebase/firebaseAdmin.js';
+import { getPluggyItem } from './getPluggyItem.js';
 
 export class InvalidRequestError extends Error {
   readonly statusCode: number = 400;

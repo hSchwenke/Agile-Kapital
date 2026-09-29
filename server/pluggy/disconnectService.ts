@@ -1,5 +1,5 @@
-import { adminDb } from '../firebase/firebaseAdmin';
-import { getPluggyApiKey } from './authenticatePluggy';
+import { adminDb } from '../firebase/firebaseAdmin.js';
+import { getPluggyApiKey } from './authenticatePluggy.js';
 
 export class DisconnectError extends Error {
   readonly statusCode: number;

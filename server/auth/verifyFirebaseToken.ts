@@ -1,5 +1,5 @@
 import type { IncomingHttpHeaders } from 'http';
-import { adminAuth } from '../firebase/firebaseAdmin';
+import { adminAuth } from '../firebase/firebaseAdmin.js';
 
 export class AuthError extends Error {
   readonly statusCode: number;

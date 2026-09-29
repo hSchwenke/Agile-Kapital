@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyFirebaseToken, AuthError } from '../../server/auth/verifyFirebaseToken';
+import { verifyFirebaseToken, AuthError } from '../../server/auth/verifyFirebaseToken.js';
 import {
   saveItemService,
   InvalidRequestError,
   ForbiddenError,
-} from '../../server/pluggy/saveItemService';
+} from '../../server/pluggy/saveItemService.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json');

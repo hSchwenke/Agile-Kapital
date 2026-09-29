@@ -1,4 +1,4 @@
-import { getPluggyApiKey } from './authenticatePluggy';
+import { getPluggyApiKey } from './authenticatePluggy.js';
 
 export interface PluggyItemDetails {
   id: string;

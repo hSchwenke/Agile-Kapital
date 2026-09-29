@@ -3,9 +3,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
     verifyFirebaseToken,
     AuthError,
-} from '../../server/auth/verifyFirebaseToken';
+} from '../../server/auth/verifyFirebaseToken.js';
 
-import { getUserTransactions } from '../../server/pluggy/transactionsService';
+import { getUserTransactions } from '../../server/pluggy/transactionsService.js';
 
 export default async function handler(
     req: VercelRequest,

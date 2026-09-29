@@ -2,11 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
   verifyFirebaseToken,
   AuthError,
-} from '../../server/auth/verifyFirebaseToken';
+} from '../../server/auth/verifyFirebaseToken.js';
 import {
   disconnectItem,
   DisconnectError,
-} from '../../server/pluggy/disconnectService';
+} from '../../server/pluggy/disconnectService.js';
 
 export default async function handler(
   req: VercelRequest,
