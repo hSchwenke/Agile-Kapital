@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { categorizeTransaction } from '../../src/services/navi/naviCategorizer';
+import { categorizeTransactionBatch } from '../../src/services/navi/naviCategorizer';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Pegamos a requisição (geralmente virá do webhook do Pluggy ou de um import)
-    const { description, amountCents, date } = req.body;
+    const { description, amountCents } = req.body;
 
     // Se estiver faltando o básico, nem aciona o guardrail da IA
     if (!description || typeof amountCents !== 'number') {
@@ -16,9 +16,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Chama o serviço blindado da Navi (Guardrail Input -> Gemini -> Guardrail Output)
-    const result = await categorizeTransaction({ description, amountCents, date });
-
-    return res.status(200).json(result);
+    const batchResult = await categorizeTransactionBatch([{ id: 'req1', description, amountCents }]);
+    
+    // Retornar o único resultado do batch
+    return res.status(200).json(batchResult.results[0]);
     
   } catch (error: any) {
     // Se o erro foi pego pelo Input Guardrail (ZodError), avisa que o input foi rejeitado

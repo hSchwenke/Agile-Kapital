@@ -1,3 +1,5 @@
+declare var process: any;
+
 import { 
   validateLLMBatchOutput, 
   BatchTransactionInputSchema, 
@@ -61,7 +63,7 @@ export async function categorizeTransactionBatch(inputs: BatchTransactionInput):
       throw new Error(`Groq API failed: ${await response.text()}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     const textOutput = data.choices?.[0]?.message?.content || "{}";
     
     return validateLLMBatchOutput(textOutput, fallbackIds);

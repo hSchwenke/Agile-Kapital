@@ -1,4 +1,4 @@
-import type { FinancialTransaction } from '../openFinance/transactionNormalizer';
+import type { FinancialTransaction } from '../../domain/financialTransaction';
 
 /**
  * Filtra as transações que a regra estática não conseguiu classificar bem ('outros')
@@ -36,22 +36,22 @@ export async function enrichWithNavi(transactions: FinancialTransaction[]): Prom
       throw new Error(`Batch API error: ${response.status}`);
     }
 
-    const { results } = await response.json();
+    const { results } = (await response.json()) as any;
 
     // results é um array de { id, categoryId, type, confidence, reasoning }
     // Vamos criar um mapa para achar rápido pelo ID O(1)
-    const mapResults = new Map(results.map((r: any) => [r.id, r]));
+    const mapResults = new Map<string, any>(results.map((r: any) => [r.id, r]));
 
     // Agora atualizamos as transações originais
     for (const tx of enriched) {
       if (mapResults.has(tx.id)) {
-        const aiResult = mapResults.get(tx.id);
+        const aiResult: any = mapResults.get(tx.id);
         tx.category = aiResult.categoryId;
         
         if (aiResult.type === 'receita') tx.financialType = 'INCOME';
         else if (aiResult.type === 'despesa') tx.financialType = 'EXPENSE';
         
-        tx.classificationSource = 'AI';
+        tx.classificationSource = 'SYSTEM';
         tx.classificationConfidence = aiResult.confidence > 80 ? 'HIGH' : 'MEDIUM';
         tx.classificationReason = aiResult.reasoning;
         
