@@ -41,4 +41,11 @@ O projeto possui um TypeScript rigoroso, e o build da Vercel falha se houver vio
 - **Confirmação Pré-Commit:** A IA **NUNCA** deve executar comandos `git commit` ou `git push` sem antes explicar detalhadamente as mudanças e pedir permissão explícita ao desenvolvedor humano.
 - **Idioma dos Commits:** Toda e qualquer mensagem de commit DEVE ser escrita obrigatoriamente em **Português do Brasil (pt-br)**.
 
-> **Instrução para a IA:** Ao iniciar ou retomar o desenvolvimento, consulte este arquivo para alinhar o seu raciocínio com as regras de tipagem e a arquitetura Serverless/Vite da aplicação. Adicionalmente, verifique o `AI_TEAM.md` para orquestração de subagentes.
+## 8. Princípios de Produto e UX (Regras de Ouro)
+- **Minimalismo e Intuição:** O Agile Kapital NÃO deve ter telas poluídas ou excesso de botões. A interface deve ser **SUPER intuitiva**, limpa, minimalista e tranquila de navegar. Qualquer nova funcionalidade deve respeitar esse espaço visual limpo.
+- **A Identidade da Navi:** A Navi **NUNCA** deve ser tratada ou construída como um "chatbot genérico e burro". Ela é um **Copiloto Inteligente** e o grande diferencial do app. Ela atua para *guiar* e *alertar* o usuário de forma ativa. Pode existir uma interface de chat para consultas rápidas, mas a base de suas interações deve transparecer profunda inteligência financeira.
+- **Roadmap Futuro (Anotado):** 
+  - *Curto prazo:* Insights Ativos/Alertas no Dashboard e Orçamento Inteligente.
+  - *Longo prazo:* Finanças Compartilhadas (Casais).
+
+> **Instrução para a IA:** Ao iniciar ou retomar o desenvolvimento, consulte este arquivo para alinhar o seu raciocínio com as regras de tipagem, a arquitetura Serverless/Vite da aplicação e os Princípios Essenciais de Produto. Adicionalmente, verifique o `AI_TEAM.md` para orquestração de subagentes.
