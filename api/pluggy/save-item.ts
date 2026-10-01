@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Nunca expor detalhes internos no log ou na resposta pública
-    console.error('Falha interna ao processar /api/pluggy/save-item');
+    console.error('Falha interna ao processar /api/pluggy/save-item:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

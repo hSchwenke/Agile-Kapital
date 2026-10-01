@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { categorizeTransactionBatch } from '../../src/services/navi/naviCategorizer';
+import { verifyFirebaseToken, AuthError } from '../../server/auth/verifyFirebaseToken.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -7,6 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    await verifyFirebaseToken(req.headers);
     // Pegamos a requisição (geralmente virá do webhook do Pluggy ou de um import)
     const { description, amountCents } = req.body;
 
@@ -22,6 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(batchResult.results[0]);
     
   } catch (error: any) {
+    if (error instanceof AuthError) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     // Se o erro foi pego pelo Input Guardrail (ZodError), avisa que o input foi rejeitado
     if (error.name === 'ZodError') {
       return res.status(400).json({ error: 'Input Validation Failed', details: error.errors });

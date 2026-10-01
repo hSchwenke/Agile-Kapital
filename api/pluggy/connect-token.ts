@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Registra erro no servidor de forma segura sem expor dados internos
-    console.error('Falha interna ao processar /api/pluggy/connect-token');
+    console.error('Falha interna ao processar /api/pluggy/connect-token:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

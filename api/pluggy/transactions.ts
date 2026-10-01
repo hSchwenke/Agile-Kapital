@@ -42,7 +42,7 @@ export default async function handler(
         }
 
         console.error(
-            'Falha interna ao processar /api/pluggy/transactions'
+            'Falha interna ao processar /api/pluggy/transactions:', error
         );
 
         return res.status(500).json({

@@ -49,7 +49,7 @@ export async function categorizeTransactionBatch(inputs: BatchTransactionInput):
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b", // Ou o modelo atualizado que definimos via Groq!
+        model: "llama3-8b-8192", // Modelo atualizado e vlido para Groq!
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt }

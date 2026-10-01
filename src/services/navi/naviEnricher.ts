@@ -1,4 +1,5 @@
 import type { FinancialTransaction } from '../../domain/financialTransaction';
+import { auth } from '../../firebase';
 
 /**
  * Filtra as transações que a regra estática não conseguiu classificar bem ('outros')
@@ -20,9 +21,13 @@ export async function enrichWithNavi(transactions: FinancialTransaction[]): Prom
 
   try {
     // Agora fazemos apenas UMA única chamada para a API com o array inteiro
+    const token = await auth.currentUser?.getIdToken();
     const response = await fetch('/api/navi/categorize-batch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token || ''}`
+      },
       body: JSON.stringify({
         transactions: toCategorize.map(tx => ({
           id: tx.id,

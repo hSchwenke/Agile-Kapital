@@ -37,4 +37,8 @@ O projeto possui um TypeScript rigoroso, e o build da Vercel falha se houver vio
 ## 6. Comandos Recorrentes
 - `npm run build`: Executa `tsc -b && vite build`. Sempre valide este comando após criar novas tipagens ou endpoints, garantindo que a compilação local (e consequentemente na Vercel) ocorrerá com sucesso.
 
-> **Instrução para a IA:** Ao iniciar ou retomar o desenvolvimento, consulte este arquivo para alinhar o seu raciocínio com as regras de tipagem e a arquitetura Serverless/Vite da aplicação.
+## 7. Regras de Fluxo e Git
+- **Confirmação Pré-Commit:** A IA **NUNCA** deve executar comandos `git commit` ou `git push` sem antes explicar detalhadamente as mudanças e pedir permissão explícita ao desenvolvedor humano.
+- **Idioma dos Commits:** Toda e qualquer mensagem de commit DEVE ser escrita obrigatoriamente em **Português do Brasil (pt-br)**.
+
+> **Instrução para a IA:** Ao iniciar ou retomar o desenvolvimento, consulte este arquivo para alinhar o seu raciocínio com as regras de tipagem e a arquitetura Serverless/Vite da aplicação. Adicionalmente, verifique o `AI_TEAM.md` para orquestração de subagentes.

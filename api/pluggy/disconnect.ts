@@ -51,7 +51,7 @@ export default async function handler(
       return res.status(error.statusCode).json({ error: error.message });
     }
 
-    console.error('Falha interna ao processar /api/pluggy/disconnect');
+    console.error('Falha interna ao processar /api/pluggy/disconnect:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
