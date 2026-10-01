@@ -123,7 +123,7 @@ export const OpenFinanceManager: React.FC<OpenFinanceManagerProps> = ({
           </div>
 
           {/* Conteúdo com Scroll */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4">
             {erro && (
               <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-xl text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
                 <AlertCircle size={16} className="shrink-0" />

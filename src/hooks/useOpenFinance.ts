@@ -5,6 +5,7 @@ import type { Transacao } from '../domain/transaction';
 import type { RawExternalTransaction } from '../domain/financialTransaction';
 import { normalizePluggyTransaction } from '../services/openFinance/transactionNormalizer';
 import { reconcileTransactions } from '../services/openFinance/reconciliationEngine';
+import { enrichWithNavi } from '../services/navi/naviEnricher';
 
 export interface OpenFinanceCreditData {
   creditLimit: number | null;
@@ -131,10 +132,13 @@ export function useOpenFinance(userId: string | undefined) {
               userAccountIds
             );
 
+            // 2.5: O Cérebro da Navi entra em ação para salvar as transações "outros"
+            const naviEnriched = await enrichWithNavi(reconciliadas);
+
             // 3. Mapeamento para o modelo de Transação do Agile Kapital com deduplicação por id
             const transacoesDeduplicadas = new Map<string, Transacao>();
 
-            for (const ft of reconciliadas) {
+            for (const ft of naviEnriched) {
               let tipo: 'receita' | 'despesa' = 'despesa';
               if (ft.financialType === 'INCOME') {
                 tipo = 'receita';

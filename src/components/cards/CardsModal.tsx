@@ -341,7 +341,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                     </div>
 
                     {/* Body com Scroll */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-6">
                         {/* Lista Horizontal de Cartões + Botão de Novo Cartão */}
                         <div>
                             <div className="flex items-center justify-between mb-3">

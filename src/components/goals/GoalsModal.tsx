@@ -387,7 +387,7 @@ export const GoalsModal: React.FC<GoalsModalProps> = ({
                     </div>
 
                     {/* Body */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-6">
                         <div>
                             <div className="flex items-center justify-between mb-3">
                                 <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
