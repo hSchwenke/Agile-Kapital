@@ -670,7 +670,7 @@ function App() {
       {
         transacaoParaDeletar && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
+            <div role="dialog" aria-modal="true" className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5] mb-2">Excluir Transação</h3>
               <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mb-6">
                 Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
@@ -699,7 +699,7 @@ function App() {
       {
         modalTransacaoAberto && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-            <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-md w-full transform transition-all">
+            <div role="dialog" aria-modal="true" className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-6 shadow-2xl max-w-md w-full transform transition-all">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-[#f4f4f5]">Nova Transação</h3>
                 <button onClick={() => setModalTransacaoAberto(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">

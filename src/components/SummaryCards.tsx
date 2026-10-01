@@ -109,8 +109,6 @@ export function SummaryCards({
                 <span className="text-[11px] font-semibold tracking-wider text-rose-600 dark:text-rose-400 uppercase">
                   Despesas
                 </span>
-
-                <div className="w-[21px] h-[21px]" aria-hidden="true" />
               </div>
 
               <p className="text-base font-bold text-rose-600 dark:text-rose-400 truncate">
@@ -232,14 +230,9 @@ export function SummaryCards({
 
           {/* Rodapé */}
           <div className="pt-3 border-t border-gray-100 dark:border-[#27272a] flex items-center justify-between text-xs text-gray-500 dark:text-[#a1a1aa] min-h-[32px]">
-            <span>
+            <span className="truncate">
               Gastos registrados no mês
             </span>
-
-            <div
-              className="w-[27px] h-[27px]"
-              aria-hidden="true"
-            />
           </div>
         </div>
 

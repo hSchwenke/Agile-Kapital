@@ -312,20 +312,20 @@ export const CardsModal: React.FC<CardsModalProps> = ({
     return (
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity">
-                <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+                <div role="dialog" aria-modal="true" className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#27272a]">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-zinc-800">
                         <div className="flex items-center gap-2.5">
                             <div className="p-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl">
                                 <CreditCard size={20} />
                             </div>
 
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-[#f4f4f5]">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100">
                                     Seção de Cartões
                                 </h3>
 
-                                <p className="text-xs text-gray-500 dark:text-[#a1a1aa]">
+                                <p className="text-xs text-gray-500 dark:text-zinc-400">
                                     Gerencie seus cartões e acompanhe compras parceladas
                                 </p>
                             </div>
@@ -333,7 +333,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
 
                         <button
                             onClick={onClose}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-[#27272a] transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
                             title="Fechar modal"
                         >
                             <X size={20} />
@@ -345,7 +345,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                         {/* Lista Horizontal de Cartões + Botão de Novo Cartão */}
                         <div>
                             <div className="flex items-center justify-between mb-3">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">
                                     Seus Cartões
                                 </span>
 
@@ -370,7 +370,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                     onSubmit={
                                         handleSalvarCartao
                                     }
-                                    className="p-4 bg-gray-50 dark:bg-[#121214] border border-gray-200 dark:border-[#27272a] rounded-xl space-y-3"
+                                    className="p-4 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl space-y-3"
                                 >
                                     <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                                         Cadastrar Novo Cartão
@@ -378,7 +378,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-600 dark:text-[#a1a1aa] mb-1">
+                                            <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
                                                 Nome do Cartão
                                             </label>
 
@@ -396,13 +396,13 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                             .value
                                                     )
                                                 }
-                                                className="w-full bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                                                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
                                                 required
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-600 dark:text-[#a1a1aa] mb-1">
+                                            <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
                                                 Banco Emissor
                                             </label>
 
@@ -420,13 +420,13 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                             .value
                                                     )
                                                 }
-                                                className="w-full bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                                                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
                                                 required
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-600 dark:text-[#a1a1aa] mb-1">
+                                            <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
                                                 Dia de Fechamento
                                                 (1 a 31)
                                             </label>
@@ -447,13 +447,13 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                             .value
                                                     )
                                                 }
-                                                className="w-full bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                                                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
                                                 required
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-600 dark:text-[#a1a1aa] mb-1">
+                                            <label className="block text-xs font-medium text-gray-600 dark:text-zinc-400 mb-1">
                                                 Dia de Vencimento
                                                 (1 a 31)
                                             </label>
@@ -474,7 +474,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                             .value
                                                     )
                                                 }
-                                                className="w-full bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
+                                                className="w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500"
                                                 required
                                             />
                                         </div>
@@ -488,7 +488,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                     false
                                                 )
                                             }
-                                            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-[#a1a1aa] hover:bg-gray-200 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+                                            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                                         >
                                             Cancelar
                                         </button>
@@ -507,13 +507,13 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                     </div>
                                 </form>
                             ) : cartoes.length === 0 && cartoesOpenFinance.length === 0 ? (
-                                <div className="text-center py-6 border border-dashed border-gray-200 dark:border-[#27272a] rounded-xl">
+                                <div className="text-center py-6 border border-dashed border-gray-200 dark:border-zinc-800 rounded-xl">
                                     <CreditCard
                                         size={32}
                                         className="mx-auto text-gray-400 mb-2 opacity-60"
                                     />
 
-                                    <p className="text-sm font-medium text-gray-600 dark:text-[#a1a1aa]">
+                                    <p className="text-sm font-medium text-gray-600 dark:text-zinc-400">
                                         Nenhum cartão cadastrado ou conectado.
                                     </p>
 
@@ -548,11 +548,11 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                 className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all ${
                                                     isSelected
                                                         ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-500 shadow-sm'
-                                                        : 'border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#121214] hover:border-gray-300 dark:hover:border-gray-700'
+                                                        : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-gray-300 dark:hover:border-gray-700'
                                                 }`}
                                             >
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-xs font-bold text-gray-900 dark:text-[#f4f4f5] truncate max-w-[120px]">
+                                                    <span className="text-xs font-bold text-gray-900 dark:text-zinc-100 truncate max-w-[120px]">
                                                         {cartao.nome}
                                                     </span>
 
@@ -563,7 +563,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                     )}
                                                 </div>
 
-                                                <span className="text-[11px] text-gray-500 dark:text-[#71717a] block mt-0.5">
+                                                <span className="text-[11px] text-gray-500 dark:text-zinc-500 block mt-0.5">
                                                     {cartao.banco}
                                                 </span>
                                             </button>
@@ -590,11 +590,11 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                 className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition-all ${
                                                     isSelected
                                                         ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 dark:border-indigo-500 shadow-sm'
-                                                        : 'border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#121214] hover:border-gray-300 dark:hover:border-gray-700'
+                                                        : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-gray-300 dark:hover:border-gray-700'
                                                 }`}
                                             >
                                                 <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-xs font-bold text-gray-900 dark:text-[#f4f4f5] truncate max-w-[120px]">
+                                                    <span className="text-xs font-bold text-gray-900 dark:text-zinc-100 truncate max-w-[120px]">
                                                         {cartaoOF.name}
                                                     </span>
 
@@ -603,7 +603,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                     </span>
                                                 </div>
 
-                                                <span className="text-[11px] text-gray-500 dark:text-[#71717a] block mt-0.5">
+                                                <span className="text-[11px] text-gray-500 dark:text-zinc-500 block mt-0.5">
                                                     {bancoNome}
                                                 </span>
                                             </button>
@@ -615,10 +615,10 @@ export const CardsModal: React.FC<CardsModalProps> = ({
 
                         {/* Detalhes do Cartão Open Finance Selecionado */}
                         {cartaoOFSelecionado && (
-                            <div className="bg-gray-50 dark:bg-[#121214] border border-gray-200 dark:border-[#27272a] rounded-xl p-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 dark:border-[#27272a]">
+                            <div className="bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 dark:border-zinc-800">
                                     <div>
-                                        <h4 className="text-base font-bold text-gray-900 dark:text-[#f4f4f5] flex items-center gap-2">
+                                        <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
                                             {(() => {
                                                 const matchingBank = (contasOpenFinance || []).find(
                                                     (acc) => acc.itemId === cartaoOFSelecionado.itemId && acc.type?.toUpperCase() === 'BANK'
@@ -631,13 +631,13 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                 Open Finance
                                             </span>
                                         </h4>
-                                        <p className="text-xs text-gray-500 dark:text-[#a1a1aa] mt-1">
+                                        <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1">
                                             Cartão integrado automaticamente via Open Finance
                                         </p>
                                     </div>
                                     <div className="text-left sm:text-right">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block">Saldo / Fatura Atual</span>
-                                        <span className="text-base font-bold text-gray-900 dark:text-[#f4f4f5]">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block">Saldo / Fatura Atual</span>
+                                        <span className="text-base font-bold text-gray-900 dark:text-zinc-100">
                                             {typeof cartaoOFSelecionado.balance === 'number'
                                                 ? formatarMoeda(cartaoOFSelecionado.balance)
                                                 : 'Não informado pela instituição'}
@@ -646,58 +646,58 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Limite de Crédito Total</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block mb-0.5">Limite de Crédito Total</span>
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                             {cartaoOFSelecionado.creditData?.creditLimit != null
                                                 ? formatarMoeda(cartaoOFSelecionado.creditData.creditLimit)
-                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                                : <span className="text-gray-400 dark:text-zinc-500 font-normal italic">Não informado pela instituição</span>}
                                         </p>
                                     </div>
 
-                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Limite Disponível</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block mb-0.5">Limite Disponível</span>
                                         <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                                             {cartaoOFSelecionado.creditData?.availableCreditLimit != null
                                                 ? formatarMoeda(cartaoOFSelecionado.creditData.availableCreditLimit)
-                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                                : <span className="text-gray-400 dark:text-zinc-500 font-normal italic">Não informado pela instituição</span>}
                                         </p>
                                     </div>
 
-                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Fechamento da Fatura</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block mb-0.5">Fechamento da Fatura</span>
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                             {formatarDataBR(cartaoOFSelecionado.creditData?.balanceCloseDate) || (
-                                                <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>
+                                                <span className="text-gray-400 dark:text-zinc-500 font-normal italic">Não informado pela instituição</span>
                                             )}
                                         </p>
                                     </div>
 
-                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Vencimento da Fatura</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block mb-0.5">Vencimento da Fatura</span>
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                             {formatarDataBR(cartaoOFSelecionado.creditData?.balanceDueDate) || (
-                                                <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>
+                                                <span className="text-gray-400 dark:text-zinc-500 font-normal italic">Não informado pela instituição</span>
                                             )}
                                         </p>
                                     </div>
 
 
-                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Bandeira</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block mb-0.5">Bandeira</span>
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                             {cartaoOFSelecionado.creditData?.brand
                                                 ? cartaoOFSelecionado.creditData.brand
-                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                                : <span className="text-gray-400 dark:text-zinc-500 font-normal italic">Não informado pela instituição</span>}
                                         </p>
                                     </div>
 
-                                    <div className="p-3 bg-white dark:bg-[#18181b] border border-gray-200/80 dark:border-[#27272a] rounded-lg">
-                                        <span className="text-[11px] text-gray-400 dark:text-[#71717a] block mb-0.5">Nível / Status</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-900 border border-gray-200/80 dark:border-zinc-800 rounded-lg">
+                                        <span className="text-[11px] text-gray-400 dark:text-zinc-500 block mb-0.5">Nível / Status</span>
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                             {cartaoOFSelecionado.creditData?.level || cartaoOFSelecionado.creditData?.status
                                                 ? `${cartaoOFSelecionado.creditData?.level || ''} ${cartaoOFSelecionado.creditData?.status ? `(${cartaoOFSelecionado.creditData.status})` : ''}`.trim()
-                                                : <span className="text-gray-400 dark:text-[#71717a] font-normal italic">Não informado pela instituição</span>}
+                                                : <span className="text-gray-400 dark:text-zinc-500 font-normal italic">Não informado pela instituição</span>}
                                         </p>
                                     </div>
                                 </div>
@@ -710,20 +710,20 @@ export const CardsModal: React.FC<CardsModalProps> = ({
 
                         {/* Detalhes do Cartão Manual Selecionado */}
                         {cartaoAtivo && (
-                            <div className="bg-gray-50 dark:bg-[#121214] border border-gray-200 dark:border-[#27272a] rounded-xl p-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 dark:border-[#27272a]">
+                            <div className="bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-200 dark:border-zinc-800">
                                     <div>
-                                        <h4 className="text-base font-bold text-gray-900 dark:text-[#f4f4f5] flex items-center gap-2">
+                                        <h4 className="text-base font-bold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
                                             {cartaoAtivo.nome}
 
-                                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-gray-200 dark:bg-[#27272a] text-gray-700 dark:text-gray-300">
+                                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-gray-200 dark:bg-zinc-800 text-gray-700 dark:text-gray-300">
                                                 {
                                                     cartaoAtivo.banco
                                                 }
                                             </span>
                                         </h4>
 
-                                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-[#a1a1aa] mt-1">
+                                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-zinc-400 mt-1">
                                             <span className="flex items-center gap-1">
                                                 <Calendar
                                                     size={
@@ -766,7 +766,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                     cartaoAtivo
                                                 )
                                             }
-                                            className="text-xs font-medium px-2.5 py-1.5 border border-gray-200 dark:border-[#27272a] rounded-lg hover:bg-gray-100 dark:hover:bg-[#27272a] text-gray-600 dark:text-[#a1a1aa] flex items-center gap-1 transition-colors"
+                                            className="text-xs font-medium px-2.5 py-1.5 border border-gray-200 dark:border-zinc-800 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400 flex items-center gap-1 transition-colors"
                                             title={
                                                 cartaoAtivo.ativo
                                                     ? 'Arquivar cartão (não aparecerá em novas compras)'
@@ -802,7 +802,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                 {/* Lista Consolidada de Compras do Cartão */}
                                 <div className="mt-4">
                                     <div className="flex items-center justify-between mb-3">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-400">
                                             Compras Consolidadas (
                                             {
                                                 comprasDoCartao.length
@@ -813,7 +813,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
 
                                     {comprasDoCartao.length ===
                                         0 ? (
-                                        <p className="text-xs text-gray-400 dark:text-[#71717a] py-4 text-center italic">
+                                        <p className="text-xs text-gray-400 dark:text-zinc-500 py-4 text-center italic">
                                             Nenhuma compra parcelada registrada neste cartão.
                                         </p>
                                     ) : (
@@ -831,11 +831,11 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                             key={
                                                                 compra.id
                                                             }
-                                                            className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs hover:border-purple-200 dark:hover:border-purple-900/40 transition-colors"
+                                                            className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs hover:border-purple-200 dark:hover:border-purple-900/40 transition-colors"
                                                         >
                                                             <div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <h5 className="text-sm font-bold text-gray-900 dark:text-[#f4f4f5]">
+                                                                    <h5 className="text-sm font-bold text-gray-900 dark:text-zinc-100">
                                                                         {
                                                                             compra.descricao
                                                                         }
@@ -853,7 +853,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                                         </span>
                                                                     ) : status.status ===
                                                                         'nao_iniciado' ? (
-                                                                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-[#27272a] px-2 py-0.5 rounded-full">
+                                                                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
                                                                             Ainda
                                                                             não
                                                                             iniciado
@@ -867,7 +867,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                                     )}
                                                                 </div>
 
-                                                                <div className="text-xs text-gray-500 dark:text-[#a1a1aa] mt-1 space-x-2">
+                                                                <div className="text-xs text-gray-500 dark:text-zinc-400 mt-1 space-x-2">
                                                                     <span>
                                                                         Comprado
                                                                         em:{' '}
@@ -908,7 +908,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                                         )}
                                                                     </div>
 
-                                                                    <div className="text-[11px] text-gray-500 dark:text-[#a1a1aa]">
+                                                                    <div className="text-[11px] text-gray-500 dark:text-zinc-400">
                                                                         {formatarTextoParcelas(
                                                                             compra
                                                                         )}
@@ -922,7 +922,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                                                             compra
                                                                         )
                                                                     }
-                                                                    className="p-1.5 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-gray-100 dark:hover:bg-[#27272a] transition-colors"
+                                                                    className="p-1.5 text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
                                                                     title="Excluir parcelamento"
                                                                 >
                                                                     <Trash2
@@ -944,11 +944,11 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                     </div>
 
                     {/* Footer */}
-                    <div className="px-6 py-3.5 bg-gray-50 dark:bg-[#121214] border-t border-gray-100 dark:border-[#27272a] flex justify-end">
+                    <div className="px-6 py-3.5 bg-gray-50 dark:bg-zinc-950 border-t border-gray-100 dark:border-zinc-800 flex justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-[#f4f4f5] bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-lg transition-colors shadow-xs"
+                            className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-zinc-100 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-lg transition-colors shadow-xs"
                         >
                             Fechar
                         </button>
@@ -959,12 +959,12 @@ export const CardsModal: React.FC<CardsModalProps> = ({
             {/* Confirmação de exclusão de compra parcelada */}
             {parcelamentoParaDeletar && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-sm w-full p-5">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-[#f4f4f5]">
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl max-w-sm w-full p-5">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100">
                             Excluir compra parcelada
                         </h3>
 
-                        <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mt-2">
+                        <p className="text-sm text-gray-500 dark:text-zinc-400 mt-2">
                             Deseja realmente excluir "
                             {
                                 parcelamentoParaDeletar.descricao
@@ -985,7 +985,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                                         null
                                     )
                                 }
-                                className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-[#f4f4f5] bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+                                className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-zinc-100 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                             >
                                 Cancelar
                             </button>
@@ -1005,14 +1005,14 @@ export const CardsModal: React.FC<CardsModalProps> = ({
             )}
             {cartaoParaAcao && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-sm w-full p-5">
-                        <h3 className="text-base font-bold text-gray-900 dark:text-[#f4f4f5]">
+                    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl max-w-sm w-full p-5">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-zinc-100">
                             {cartaoParaAcao.acao === 'arquivar'
                                 ? 'Arquivar cartão'
                                 : 'Excluir cartão'}
                         </h3>
 
-                        <p className="text-sm text-gray-500 dark:text-[#a1a1aa] mt-2">
+                        <p className="text-sm text-gray-500 dark:text-zinc-400 mt-2">
                             {cartaoParaAcao.acao === 'arquivar'
                                 ? `O cartão "${cartaoParaAcao.cartao.nome}" possui compras vinculadas e não pode ser excluído sem perder o histórico. Deseja arquivá-lo?`
                                 : `Deseja realmente excluir o cartão "${cartaoParaAcao.cartao.nome}"?`}
@@ -1033,7 +1033,7 @@ export const CardsModal: React.FC<CardsModalProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setCartaoParaAcao(null)}
-                                className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-[#f4f4f5] bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] hover:bg-gray-50 dark:hover:bg-[#27272a] rounded-lg transition-colors"
+                                className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-zinc-100 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                             >
                                 Cancelar
                             </button>

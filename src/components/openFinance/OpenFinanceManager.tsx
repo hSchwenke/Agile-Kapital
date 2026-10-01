@@ -69,7 +69,7 @@ export const OpenFinanceManager: React.FC<OpenFinanceManagerProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity">
-        <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-xl w-full flex flex-col max-h-[85vh] overflow-hidden">
+        <div role="dialog" aria-modal="true" className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-xl w-full flex flex-col max-h-[85vh] overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#27272a]">
             <div className="flex items-center gap-2.5">
@@ -260,7 +260,7 @@ export const OpenFinanceManager: React.FC<OpenFinanceManagerProps> = ({
       {/* Modal de Confirmação de Desconexão */}
       {itemParaDesconectar && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-2xl max-w-sm w-full">
+          <div role="dialog" aria-modal="true" className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-xl p-5 shadow-2xl max-w-sm w-full">
             <h4 className="text-base font-bold text-gray-900 dark:text-white mb-2">
               Desconectar Conexão?
             </h4>

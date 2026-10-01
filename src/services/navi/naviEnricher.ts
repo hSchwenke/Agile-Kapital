@@ -29,11 +29,14 @@ export async function enrichWithNavi(transactions: FinancialTransaction[]): Prom
         'Authorization': `Bearer ${token || ''}`
       },
       body: JSON.stringify({
-        transactions: toCategorize.map(tx => ({
-          id: tx.id,
-          description: tx.description,
-          amountCents: tx.amountCentavos
-        }))
+        transactions: toCategorize.slice(0, 100).map(tx => {
+          const desc = (tx.description || '').trim();
+          return {
+            id: tx.id,
+            description: desc ? desc.substring(0, 200) : 'Transacao sem nome',
+            amountCents: Math.round(tx.amountCentavos || 0)
+          };
+        })
       }),
     });
 

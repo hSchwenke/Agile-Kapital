@@ -361,7 +361,7 @@ export const GoalsModal: React.FC<GoalsModalProps> = ({
     return (
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity">
-                <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+                <div role="dialog" aria-modal="true" className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-[#27272a] rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#27272a]">
                         <div className="flex items-center gap-2.5">
@@ -510,7 +510,7 @@ export const GoalsModal: React.FC<GoalsModalProps> = ({
             {/* Modal de Confirmação (Exclusão/Arquivamento) */}
             {metaParaAcao && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-[#18181b] rounded-xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-[#27272a]">
+                    <div role="dialog" aria-modal="true" className="bg-white dark:bg-[#18181b] rounded-xl p-6 max-w-sm w-full shadow-2xl border border-gray-200 dark:border-[#27272a]">
                         <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
                             {metaParaAcao.acao === 'excluir'
                                 ? 'Excluir Meta?'

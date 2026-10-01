@@ -28,6 +28,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.error("Erro interno no endpoint de categorização em lote:", error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error', message: error.message });
   }
 }
